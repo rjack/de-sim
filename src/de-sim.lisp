@@ -24,7 +24,7 @@
 	   :world
 	   :run))
 
-(in-package :org.altervista.rjack.desim)
+(in-package :ds)
 
 
 (defclass identifiable ()
@@ -33,7 +33,7 @@
     :initform (error ":id missing")
     :reader id-of
     :type fixnum
-    :documentation "Identifier. Can be unique or not, subclasses decide.")))
+    :documentation "Unique or not, subclasses decide.")))
 
 
 (defclass event (identifiable)
@@ -52,9 +52,14 @@
     :documentation "Implements the behaviour of this event.")))
 
 
+(defclass world (identifiable)
+  ((history
+    :initform ()
+    :accessor history-of
+    :type list
+    :documentation "Past instances of this world, newer first.")
 
-(defclass world ()
-  ((events
+   (events
     :initarg events
     :initform ()
     :accessor events-of
@@ -62,10 +67,37 @@
     :documentation "World's events.")))
 
 
-(defgeneric run (context obj)
-  (:documentation "Execute the action associated with the object in
-  the given context."))
+(defmethod initialize-instance :after ((w world) &key)
+  (push w (history-of w)))
+
+
+(defgeneric run (world event)
+  (:documentation "Execute the action associated with event returning
+  a new world, possibly different from the given one."))
+
+
+(defgeneric next (world)
+  (:documentation "Return the next world, based on the given one."))
+
+
+(defgeneric prev (world)
+  (:documentation "Return the previous world, relative to the given
+  one."))
 
 
 (defmethod run ((w world) (ev event))
-  (funcall (action-of ev) w))
+  (let* ((new-world (copy-structure w))
+	 (this (pop (events-of new-world))))
+    (push new-world (history-of new-world))
+    (assert (eql this ev) nil
+	    "executing event should be the first in the event list.")
+    (funcall (action-of ev) new-world)
+    new-world))
+
+
+(defmethod next ((w world))
+  (run w (first (events-of w))))
+
+
+(defmethod prev ((w world))
+  (second (history-of w)))
