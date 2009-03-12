@@ -12,8 +12,13 @@
 (in-package :tw)
 
 
+(defparameter *genid-table* -1)
+
 (defclass table (world)
-  ((chairs
+  ((ds::id
+    :initform (incf *genid-table*))
+
+   (chairs
     :initarg :chairs
     :initform (error "missing :chairs")
     :accessor chairs-of
@@ -28,8 +33,13 @@
     :documentation "List of persons.")))
 
 
+(defparameter *genid-person* -1)
+
 (defclass person (simulated)
-  ((description
+  ((ds::id
+    :initform (incf *genid-person*))
+
+   (ds::description
     :initform "a person")
 
    (name
@@ -40,8 +50,13 @@
     :documentation "Name of this person.")))
 
 
+(defparameter *genid-chair* -1)
+
 (defclass chair (simulated)
-  ((description
+  ((ds::id
+    :initform (incf *genid-chair*))
+
+   (ds::description
     :initform "a chair")
    
    (occupier
@@ -53,15 +68,14 @@
 
 (defparameter *table*
   (make-instance 'table :id 0
-		 :chairs (list (make-instance 'chair :id 0)
-			       (make-instance 'chair :id 1)
-			       (make-instance 'chair :id 2)
-			       (make-instance 'chair :id 3))
+		 :chairs (list (make-instance 'chair)
+			       (make-instance 'chair))
 		 :persons (list (make-instance 'person
-					       :id 0 :name "Geppo")
+					       :name "Geppo")
 				(make-instance 'person
-					       :id 1 :name "Claudia")
+					       :name "Claudia")
 				(make-instance 'person
-					       :id 2 :name "Peppo")
+					       :name "Peppo")
 				(make-instance 'person
-					       :id 3 :name "Verruca"))))
+					       :name "Verruca"))
+		 :events ()))
