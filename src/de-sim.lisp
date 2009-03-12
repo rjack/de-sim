@@ -13,14 +13,28 @@
 ;;      copyright notice, this list of conditions and the following
 ;;      disclaimer in the documentation and/or other materials
 ;;      provided with the distribution.
+;;
+;; THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+;; WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+;; OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+;; DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+;; INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+;; (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+;; SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+;; HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+;; STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 (declaim (optimize debug safety (speed 0)))
+
 
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
   (:export :event
+	   :object
 	   :world
 	   :run))
 
@@ -44,12 +58,32 @@
     :type fixnum
     :documentation "When this event must be executed.")
 
-   (action
-    :initarg :action
+   (causes
+    :initarg :causes
+    :initform (error "missing :causes")
+    :accessor causes-of
+    :type list
+    :documentation "List of objects that will cause this event to
+    happen.")
+
+   (!action
+    :initarg :!action
     :initform (error "missing :action")
-    :reader action-of
+    :reader !action-of
     :type function   ; FIXME: must fully specify signature.
-    :documentation "Implements the behaviour of this event.")))
+    :documentation "Implements the behaviour of this event, taking the
+    world as its only argument and modifying it.
+    NOTE: function can modify the world structure only, NOT the
+    structure of world's elements. This is because they are shared
+    with the old instances of world that are kept in the history.")))
+
+
+(defclass object (identifiable)
+  ((effects
+    :initform ()
+    :accessor effects-of
+    :type list
+    :documentation "List of events this object is causing.")))
 
 
 (defclass world (identifiable)
@@ -91,7 +125,7 @@
     (push new-world (history-of new-world))
     (assert (eql this ev) nil
 	    "executing event should be the first in the event list.")
-    (funcall (action-of ev) new-world)
+    (funcall (!action-of ev) new-world)
     new-world))
 
 
