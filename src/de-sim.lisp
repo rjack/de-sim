@@ -33,10 +33,8 @@
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
-  (:export :event
-	   :object
-	   :world
-	   :run))
+  (:export :simulated :event :world
+	   :clone :run :next :prev))
 
 (in-package :ds)
 
@@ -48,6 +46,21 @@
     :reader id-of
     :type fixnum
     :documentation "Unique or not, subclasses decide.")))
+
+
+(defclass simulated (identifiable)
+  ((description
+    :initarg :description
+    :initform "simulated object"
+    :accessor description-of
+    :type string
+    :documentation "Description of this object.")
+
+   (effects
+    :initform ()
+    :accessor effects-of
+    :type list
+    :documentation "Set of events this object is causing.")))
 
 
 (defclass event (identifiable)
@@ -78,14 +91,6 @@
     with the old instances of world that are kept in the history.")))
 
 
-(defclass object (identifiable)
-  ((effects
-    :initform ()
-    :accessor effects-of
-    :type list
-    :documentation "List of events this object is causing.")))
-
-
 (defclass world (identifiable)
   ((history
     :initform ()
@@ -94,15 +99,15 @@
     :documentation "Past instances of this world, newer first.")
 
    (events
-    :initarg events
-    :initform ()
+    :initarg :events
+    :initform (error "missing :events")
     :accessor events-of
     :type list
     :documentation "World's events.")))
 
 
-(defmethod initialize-instance :after ((w world) &key)
-  (push w (history-of w)))
+(defgeneric clone (object)
+  (:documentation "Return a shallow copy of object."))
 
 
 (defgeneric run (world event)
@@ -119,8 +124,15 @@
   one."))
 
 
+(defmethod clone ((w world))
+  (let ((new-world (make-instance 'world :id (id-of w))))
+    (setf (events-of new-world) (events-of w))
+    (setf (history-of new-world) (history-of w))
+    new-world))
+
+
 (defmethod run ((w world) (ev event))
-  (let* ((new-world (copy-structure w))
+  (let* ((new-world (clone w))
 	 (this (pop (events-of new-world))))
     (push new-world (history-of new-world))
     (assert (eql this ev) nil
