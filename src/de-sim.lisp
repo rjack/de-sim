@@ -33,19 +33,42 @@
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
-  (:export :simulated :event :world
-	   :clone :run :next :prev))
+  (:export :clone :run :next :prev
+	   :identifiable :id-of
+	   :simulated :description-of :effects-of
+	   :event :time-of :causes-of :!action-of
+	   :world :hystory-of :events-of))
+
 
 (in-package :ds)
+
+
+(defgeneric clone (object)
+  (:documentation "Return a shallow copy of object."))
+
+
+(defgeneric run (world event)
+  (:documentation "Execute the action associated with event returning
+  a new world, possibly different from the given one."))
+
+
+(defgeneric next (world)
+  (:documentation "Return the next world, based on the given one."))
+
+
+(defgeneric prev (world)
+  (:documentation "Return the previous world, relative to the given
+  one."))
 
 
 (defclass identifiable ()
   ((id
     :initarg :id
     :initform (error ":id missing")
-    :reader id-of
+    :accessor id-of
     :type fixnum
-    :documentation "Unique or not, subclasses decide.")))
+    :documentation "Unique or not, auto-generated or not, subclasses
+    decide.")))
 
 
 (defclass simulated (identifiable)
@@ -106,22 +129,8 @@
     :documentation "World's events.")))
 
 
-(defgeneric clone (object)
-  (:documentation "Return a shallow copy of object."))
-
-
-(defgeneric run (world event)
-  (:documentation "Execute the action associated with event returning
-  a new world, possibly different from the given one."))
-
-
-(defgeneric next (world)
-  (:documentation "Return the next world, based on the given one."))
-
-
-(defgeneric prev (world)
-  (:documentation "Return the previous world, relative to the given
-  one."))
+(defmethod initialize-instance :after ((w world) &key)
+  (push w (history-of w)))
 
 
 (defmethod clone ((w world))
