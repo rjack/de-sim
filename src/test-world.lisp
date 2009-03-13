@@ -66,16 +66,40 @@
     nil if the chair is free.")))
 
 
+(defparameter *genid-table-event* -1)
+
+(defclass table-event (event)
+  ((ds::id
+    :initform (incf *genid-table-event*))))
+
+
+(defmethod !transform ((dest table) (source table))
+  (setf (chairs-of dest) (chairs-of source))
+  (setf (persons-of dest) (persons-of source))
+  (call-next-method))
+
+
+(defmethod clone ((tab table))
+  (!transform (make-instance 'table
+			     :events nil
+			     :chairs nil
+			     :persons nil)
+	      tab))
+
+
+(defparameter *geppo* (make-instance 'person :name "Geppo"))
+(defparameter *claudia* (make-instance 'person :name "Claudia"))
+(defparameter *verruca* (make-instance 'person :name "Verruca"))
+
+(defparameter *table-events*
+  (list (make-instance 'table-event :time 3
+		       :causes (list *geppo*)
+		       :!action (lambda (world)
+				  (format t
+"~&Geppo does something in world ~a." (id-of world))))))
+
 (defparameter *table*
-  (make-instance 'table :id 0
-		 :chairs (list (make-instance 'chair)
-			       (make-instance 'chair))
-		 :persons (list (make-instance 'person
-					       :name "Geppo")
-				(make-instance 'person
-					       :name "Claudia")
-				(make-instance 'person
-					       :name "Peppo")
-				(make-instance 'person
-					       :name "Verruca"))
-		 :events ()))
+  (make-instance 'table
+		 :persons (list *geppo* *claudia* *verruca*)
+		 :chairs (list (make-instance 'chair))
+		 :events *table-events*))
