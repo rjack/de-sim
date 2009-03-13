@@ -33,7 +33,7 @@
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
-  (:export :clone :run :next :prev
+  (:export :!transform :clone :run :next :prev
 	   :identifiable :id-of
 	   :simulated :description-of :effects-of
 	   :event :time-of :causes-of :!action-of
@@ -41,6 +41,11 @@
 
 
 (in-package :ds)
+
+
+(defgeneric !transform (dest source)
+  (:documentation "Fill dest with some, all or none of the values from
+  source."))
 
 
 (defgeneric clone (object)
@@ -133,11 +138,14 @@
   (push w (history-of w)))
 
 
+(defmethod !transform ((dest world) (source world))
+  (setf (events-of dest) (events-of source))
+  (setf (history-of dest) (history-of source))
+  dest)
+
+
 (defmethod clone ((w world))
-  (let ((new-world (make-instance 'world :id (id-of w))))
-    (setf (events-of new-world) (events-of w))
-    (setf (history-of new-world) (history-of w))
-    new-world))
+  (!transform (make-instance 'world :id (id-of w) :events nil) w))
 
 
 (defmethod run ((w world) (ev event))
