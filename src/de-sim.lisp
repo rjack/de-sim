@@ -35,8 +35,8 @@
   (:use :common-lisp)
   (:export :!transform :clone :run :next :prev
 	   :identifiable :id-of
-	   :simulated :description-of :effects-of
-	   :event :time-of :causes-of :!action-of
+	   :simulated :description-of
+	   :event :time-of :!action-of
 	   :world :hystory-of :events-of))
 
 
@@ -82,13 +82,7 @@
     :initform "simulated object"
     :accessor description-of
     :type string
-    :documentation "Description of this object.")
-
-   (effects
-    :initform ()
-    :accessor effects-of
-    :type list
-    :documentation "Set of events this object is causing.")))
+    :documentation "Description of this object.")))
 
 
 (defclass event (identifiable)
@@ -98,14 +92,6 @@
     :reader time-of
     :type fixnum
     :documentation "When this event must be executed.")
-
-   (causes
-    :initarg :causes
-    :initform (error "missing :causes")
-    :accessor causes-of
-    :type list
-    :documentation "List of objects that will cause this event to
-    happen.")
 
    (!action
     :initarg :!action
