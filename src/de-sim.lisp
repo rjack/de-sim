@@ -33,37 +33,23 @@
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
-  (:export :!transform :clone :run :next :prev
+  (:export :schedule :next :prev
 	   :identifiable :id-of
 	   :simulated :description-of
-	   :event :time-of :!action-of
-	   :world :hystory-of :events-of))
+	   :event :time-of :action-of
+	   :world :clock-of :events-of))
 
 
 (in-package :ds)
 
 
-(defgeneric !transform (dest source)
-  (:documentation "Fill dest with some, all or none of the values from
-  source."))
-
-
-(defgeneric clone (object)
-  (:documentation "Return a shallow copy of object."))
-
-
-(defgeneric run (world event)
-  (:documentation "Execute the action associated with event returning
-  a new world, possibly different from the given one."))
-
-
 (defgeneric next (world)
-  (:documentation "Return the next world, based on the given one."))
+  (:documentation "Execute the action associated with the next event
+  returning a new world, possibly different from the given one."))
 
 
-(defgeneric prev (world)
-  (:documentation "Return the previous world, relative to the given
-  one."))
+(defgeneric schedule (word event)
+  (:documentation "Add event into world's events."))
 
 
 (defclass identifiable ()
@@ -93,10 +79,10 @@
     :type fixnum
     :documentation "When this event must be executed.")
 
-   (!action
-    :initarg :!action
+   (action
+    :initarg :action
     :initform (error "missing :action")
-    :reader !action-of
+    :reader action-of
     :type function   ; FIXME: must fully specify signature.
     :documentation "Implements the behaviour of this event, taking the
     world as its only argument and modifying it.
@@ -106,11 +92,12 @@
 
 
 (defclass world (identifiable)
-  ((history
-    :initform ()
-    :accessor history-of
-    :type list
-    :documentation "Past instances of this world, newer first.")
+  ((clock
+    :initform 0
+    :initarg :clock
+    :accessor clock-of
+    :type fixnum
+    :documentation "World's internal clock.")
 
    (events
     :initarg :events
@@ -120,38 +107,19 @@
     :documentation "World's events.")))
 
 
-(defmethod initialize-instance :after ((w world) &key)
-  (push w (history-of w)))
-
-
-(defmethod !transform ((dest world) (source world))
-  (setf (events-of dest) (events-of source))
-  (setf (history-of dest) (history-of source))
-  dest)
-
-
-(defmethod clone ((w world))
-  (!transform (make-instance 'world :id (id-of w) :events nil) w))
-
-
-(defmethod run :around ((w world) (ev event))
-  (format t "~&~D " (time-of ev))
-  (call-next-method))
-
-
-(defmethod run ((w world) (ev event))
-  (let* ((new-world (clone w))
-	 (this (pop (events-of new-world))))
-    (push new-world (history-of new-world))
-    (assert (eql this ev) nil
-	    "executing event should be the first in the event list.")
-    (funcall (!action-of ev) new-world)
-    new-world))
+(defmethod schedule ((w world) (ev event))
+  (assert (>= (time-of ev) (clock-of w)) nil
+	  "Scheduling an event in the past.")
+  (setf (events-of w)
+	(sort (cons ev (events-of w))
+	      #'< :key #'time-of)))
 
 
 (defmethod next ((w world))
-  (run w (first (events-of w))))
-
-
-(defmethod prev ((w world))
-  (second (history-of w)))
+  (with-accessors ((events events-of) (clock clock-of)) w
+    (when (not (null events))
+      (let ((ev (pop events)))
+	(setf clock (time-of ev))
+	(format t "~&~D " clock)
+	(funcall (action-of ev) w)
+	w))))
