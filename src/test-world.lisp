@@ -93,10 +93,9 @@
 
 (defparameter *table-events*
   (list (make-instance 'table-event :time 3
-		       :causes (list *geppo*)
 		       :!action (lambda (world)
 				  (format t
-"~&Geppo does something in world ~a." (id-of world))))))
+"Geppo does something in world ~a." (id-of world))))))
 
 (defparameter *table*
   (make-instance 'table
