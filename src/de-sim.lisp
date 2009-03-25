@@ -134,6 +134,11 @@
   (!transform (make-instance 'world :id (id-of w) :events nil) w))
 
 
+(defmethod run :around ((w world) (ev event))
+  (format t "~&~D " (time-of ev))
+  (call-next-method))
+
+
 (defmethod run ((w world) (ev event))
   (let* ((new-world (clone w))
 	 (this (pop (events-of new-world))))
