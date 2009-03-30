@@ -33,7 +33,7 @@
 (defpackage :org.altervista.rjack.desim
   (:nicknames :ds)
   (:use :common-lisp)
-  (:export :schedule :next :prev
+  (:export :schedule :next
 	   :identifiable :id-of
 	   :simulated :description-of
 	   :event :time-of :action-of
