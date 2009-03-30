@@ -39,6 +39,22 @@
 	   :event :time-of :action-of
 	   :world :clock-of :events-of))
 
+;; OVERVIEW
+
+;; de-sim is a very _very_, simple discrete event simulator.  It
+;; consist of a world that maintains a list of events.  With SCHEDULE
+;; you add an event to this list.  Events can change the world.  Let W
+;; be the world and E the first event of the list: with NEXT you get a
+;; new world W' resulting from the action of E on W.  Note that W and
+;; W' may or may not differ, depending from the action carried by E.
+;;
+;; That's all. Extend the WORLD class and the EVENT class to customize
+;; the world to your needs. The SIMULATED class can be used as the
+;; base class of all the simulated objects in the world.
+;;
+;; de-sim does not provide a way to cancel scheduled events, you must
+;; choose and implement a strategy yourself.
+
 
 (in-package :ds)
 
