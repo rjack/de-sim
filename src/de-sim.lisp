@@ -1,7 +1,7 @@
 ;; DE-SIM
 ;; Discrete Event SIMulator.
 
-;; Copyright (C) 2008  Giacomo Ritucci
+;; Copyright (C) 2009  Giacomo Ritucci
 
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions
