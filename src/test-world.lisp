@@ -27,7 +27,7 @@
 (defparameter *genid-table* -1)
 
 (defclass table (world)
-  ((ds::id
+  ((de-sim::id
     :initform (incf *genid-table*))
 
    (persons
@@ -40,10 +40,10 @@
 (defparameter *genid-person* -1)
 
 (defclass person (simulated)
-  ((ds::id
+  ((de-sim::id
     :initform (incf *genid-person*))
 
-   (ds::description
+   (de-sim::description
     :initform "a person")
 
    (name
@@ -62,7 +62,7 @@
 (defparameter *genid-table-event* -1)
 
 (defclass table-event (event)
-  ((ds::id
+  ((de-sim::id
     :initform (incf *genid-table-event*))))
 
 

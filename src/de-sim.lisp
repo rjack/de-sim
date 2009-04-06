@@ -30,8 +30,8 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.desim
-  (:nicknames :ds)
+(defpackage :org.altervista.rjack.de-sim
+  (:nicknames :de-sim)
   (:use :common-lisp)
   (:export :schedule :next
 	   :identifiable :id-of
@@ -56,7 +56,7 @@
 ;; choose and implement a strategy yourself.
 
 
-(in-package :ds)
+(in-package :de-sim)
 
 
 (defgeneric next (world)

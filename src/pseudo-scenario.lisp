@@ -27,4 +27,3 @@
 (defaction bob 10
   (let ((ch (random-pick (chairs-of my-table))))
     (sit-on ch)))
-   
