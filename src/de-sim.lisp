@@ -33,7 +33,7 @@
 (defpackage :org.altervista.rjack.de-sim
   (:nicknames :de-sim)
   (:use :common-lisp)
-  (:export :schedule :next
+  (:export :schedule :next :run-event
 	   :identifiable :id-of
 	   :simulated :description-of
 	   :event :time-of :action-of
@@ -57,6 +57,10 @@
 
 
 (in-package :de-sim)
+
+
+(defgeneric run-event (event world)
+  (:documentation "Execute event's action giving world as argument."))
 
 
 (defgeneric next (world)
@@ -124,11 +128,16 @@
 
 
 (defmethod schedule ((w world) (ev event))
-  (assert (>= (time-of ev) (clock-of w)) nil
-	  "Scheduling an event in the past.")
-  (setf (events-of w)
-	(sort (cons ev (events-of w))
-	      #'< :key #'time-of)))
+  (if (< (time-of ev)
+	 (clock-of w))
+      (error "Scheduling an event in the past.")
+      (setf (events-of w)
+	    (sort (cons ev (events-of w))
+		  #'< :key #'time-of))))
+
+
+(defmethod run-event ((ev event) (w world))
+  (funcall (action-of ev) w))
 
 
 (defmethod next ((w world))
@@ -137,5 +146,5 @@
       (let ((ev (pop events)))
 	(setf clock (time-of ev))
 	(format t "~&~D " clock)
-	(funcall (action-of ev) w)
+	(run-event ev w)
 	w))))
