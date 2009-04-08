@@ -9,8 +9,4 @@
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
-    :components ((:file "de-sim")
-		 (:file "lisp-unit")
-		 (:file "de-sim-test"
-			:depends-on ("de-sim"
-				     "lisp-unit"))))
+    :components ((:file "de-sim")))
