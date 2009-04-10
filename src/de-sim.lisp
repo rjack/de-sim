@@ -132,8 +132,8 @@
 	 (clock-of w))
       (error "Scheduling an event in the past.")
       (setf (events-of w)
-	    (sort (cons ev (events-of w))
-		  #'< :key #'time-of))))
+	    (stable-sort (append (events-of w) (list ev))
+			 #'< :key #'time-of))))
 
 
 (defmethod run-event ((ev event) (w world))
