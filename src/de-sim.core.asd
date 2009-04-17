@@ -1,12 +1,12 @@
-(defpackage :de-sim-asd
+(defpackage :asd.core
   (:use :cl :asdf))
 
-(in-package :de-sim-asd)
+(in-package :asd.core)
 
 
-(defsystem de-sim
-    :name "de-sim"
+(defsystem de-sim.core
+    :name "core"
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
-    :components ((:file "de-sim")))
+    :components ((:file "core")))
