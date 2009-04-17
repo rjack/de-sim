@@ -30,12 +30,12 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim-test
-  (:nicknames :de-sim-test)
-  (:use :common-lisp :lisp-unit :de-sim))
+(defpackage :org.altervista.rjack.de-sim.test.core
+  (:nicknames :de-sim.test.core)
+  (:use :common-lisp :lisp-unit :de-sim.core))
 
 
-(in-package :de-sim-test)
+(in-package :de-sim.test.core)
 
 
 (defparameter *times* 1000)
