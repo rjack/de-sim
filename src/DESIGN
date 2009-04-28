@@ -85,3 +85,24 @@ Il notificatore è molto generale e non conosce i notificati. Il notificato
 deve operare un "subscribe" più complesso che specifichi in che occasioni
 vuole essere notificato e che messaggio vuole che gli venga inviato.
 Complesso! Definire "occasione".
+
+  Ok, definizione di "occasione"
+
+Il notificatore decide quali delle situazioni in cui può trovarsi vuole che
+siano notificabili ai notificati. La lista di queste azioni deve essere
+consultabile. Un notificato può consultare la lista e scegliere di fare
+"subscribe" in una di queste situazioni, specificando la notifica che vuole
+ricevere.
+
+Esempio: un Buffer può avere le seguenti situazioni importanti:
+- elemento-aggiunto
+- elemento-rimosso
+- buffer-pieno
+- buffer-vuoto
+- distrutto
+
+Un Allarme può consultare la lista e scegliere di fare subscribe alla
+situazione "buffer-pieno" chiedendo di ricevere la notifica "allarme-rosso".
+Di fatto, per mezzo del "subscribe", Allarme specifica quale callback
+chiamare, in questo caso "allarme-rosso", quando Buffer si trova nella
+gestione della situazione "buffer-pieno".
