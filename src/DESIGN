@@ -1,0 +1,29 @@
+				DE-SIM DESIGN
+			       Giacomo Ritucci
+
+  OBIETTIVI
+
+1. astrazione
+2. modularità
+3. granularità
+
+
+  Astrazione
+
+Ogni componente è dotato di un'interfaccia ben definita che ne stabilisce il
+comportamento osservabile dall'esterno: i dettagli interni del componente e
+dei suoi sotto-componenti non devono essere visibili.
+
+
+  Modularità
+
+Ogni componente deve essere programmabile "a sè", in accordo con la sua
+interfaccia. Componenti che aderiscono alla stessa interfaccia devono essere
+intercambiabili.
+
+
+  Granularità
+
+Ogni componente può essere a sua volta costituito da altri componenti, in un
+gioco di scatole cinesi virtualmente illimitato, per permettere di raggiungere
+il dettaglio di rappresentazione voluto.
