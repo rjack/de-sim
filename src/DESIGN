@@ -46,3 +46,42 @@ Simulator (Object)
 = imminent-event ()
   ; ritorna il più prossimo tra il suo primo evento e l'imminent-event di ogni
   ; suo componente.
+
+
+  NOTIFICHE
+
+L'esecuzione è guidata dallo scambio di notifiche attraverso il metodo
+"notify". Ogni oggetto conosce un certo numero di messaggi che costituiscono
+la sua interfaccia di interazione con gli altri oggetti.
+
+
+  Scambio di notifiche
+
+Tre casi:
+
+1. oggetti a diretta conoscenza reciproca
+2. notificatore conosce notificato
+3. notificato conosce notificatore
+
+
+  Diretta conoscenza reciproca
+
+Oggetti che sono parte di un aggregato ben definito possiedono il loro
+protocollo di comunicazione e lo seguono per l'invio di notifiche. Semplice ma
+poco flessibile.
+
+
+  Notificatore conosce notificato
+
+Notificato fa un semplice "subscribe" sul notificatore per ricevere notifiche:
+è quest'ultimo che decide quali notifiche devono essere inviate e quando.
+Intelligenza nel notificatore, non sempre possibile che conosca tutti gli
+altri oggetti.
+
+
+  Notificato conosce notificatore
+
+Il notificatore è molto generale e non conosce i notificati. Il notificato
+deve operare un "subscribe" più complesso che specifichi in che occasioni
+vuole essere notificato e che messaggio vuole che gli venga inviato.
+Complesso! Definire "occasione".
