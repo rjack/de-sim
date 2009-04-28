@@ -106,3 +106,13 @@ situazione "buffer-pieno" chiedendo di ricevere la notifica "allarme-rosso".
 Di fatto, per mezzo del "subscribe", Allarme specifica quale callback
 chiamare, in questo caso "allarme-rosso", quando Buffer si trova nella
 gestione della situazione "buffer-pieno".
+
+  Notifica distruzione oggetti
+
+Tutti gli oggetti che usano le notifiche devono notificare tutti gli altri
+oggetti coinvolti nel momento in cui vengono distrutti: altrimenti in
+linguaggi come C e C++ si ha una dangling reference, in linguaggi con garbage
+collection si ha un memory leak.
+
+Questo significa che non c'è distinzione tra Notificatori e Notificati:
+l'interfaccia è unica sia per chi riceve che per chi invia notifiche.
