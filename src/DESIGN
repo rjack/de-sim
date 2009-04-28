@@ -27,3 +27,22 @@ intercambiabili.
 Ogni componente può essere a sua volta costituito da altri componenti, in un
 gioco di scatole cinesi virtualmente illimitato, per permettere di raggiungere
 il dettaglio di rappresentazione voluto.
+
+
+  DIAGRAMMA DELLE CLASSI
+
+Object
+- imminent-event () -> event, owner
+- destroy ()
+- notify (msg, args) -> bool
+- available-notifications () -> lista di messaggi conosciuti
+
+Simulated (Object)
+= imminent-event ()
+  ; ritorna il suo primo evento.
+
+Simulator (Object)
+. components     ; Objects: possono essere Simulated o altri Simulator.
+= imminent-event ()
+  ; ritorna il più prossimo tra il suo primo evento e l'imminent-event di ogni
+  ; suo componente.
