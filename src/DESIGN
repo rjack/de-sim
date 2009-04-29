@@ -1,0 +1,131 @@
+				DE-SIM DESIGN
+			       Giacomo Ritucci
+
+  OBIETTIVI
+
+1. astrazione
+2. modularità
+3. granularità
+
+
+  Astrazione
+
+Ogni componente è dotato di un'interfaccia ben definita che ne stabilisce il
+comportamento osservabile dall'esterno: i dettagli interni del componente e
+dei suoi sotto-componenti non devono essere visibili.
+
+
+  Modularità
+
+Ogni componente deve essere programmabile "a sè", in accordo con la sua
+interfaccia. Componenti che aderiscono alla stessa interfaccia devono essere
+intercambiabili.
+
+
+  Granularità
+
+Ogni componente può essere a sua volta costituito da altri componenti, in un
+gioco di scatole cinesi virtualmente illimitato, per permettere di raggiungere
+il dettaglio di rappresentazione voluto.
+
+
+  DIAGRAMMA DELLE CLASSI
+
+Object
+- imminent-event () -> event, owner
+- destroy ()
+  ; distrugge l'oggetto e notifica della distruzione tutti gli oggetti che lo
+  ; conoscono.
+- notify (src, msg, args) -> t
+  ; invia una notifica all'oggetto, di mittente src e argomenti args.
+  ; solleva un errore se la notifica è sconosciuta
+- observable-actions () -> list
+  ; ritorna la lista di azioni osservabili
+- subscribe (obj, action, tellback) -> t
+  ; errori: no such action
+  ; registra obj come osservatore di action: quando questa si verifica a obj
+  ; viene inviata la notifica tellback.
+- unsubscribe (obj, action) -> t
+  ; errori: no such action, not subscribed
+  ; revoca la sottoscrizione di obj all'azione action: quando questa si
+  ; verifica obj non verrà più notificato.
+
+Simulated (Object)
+= imminent-event ()
+  ; ritorna il suo primo evento.
+
+Simulator (Object)
+. components     ; Objects: possono essere Simulated o altri Simulator.
+= imminent-event ()
+  ; ritorna il più prossimo tra il suo primo evento e l'imminent-event di ogni
+  ; suo componente.
+
+
+  NOTIFICHE
+
+L'esecuzione è guidata dallo scambio di notifiche attraverso il metodo
+"notify". Ogni oggetto conosce un certo numero di messaggi che costituiscono
+la sua interfaccia di interazione con gli altri oggetti.
+
+
+  Scambio di notifiche
+
+Tre casi:
+
+1. oggetti a diretta conoscenza reciproca
+2. notificatore conosce notificato
+3. notificato conosce notificatore
+
+
+  Diretta conoscenza reciproca
+
+Oggetti che sono parte di un aggregato ben definito possiedono il loro
+protocollo di comunicazione e lo seguono per l'invio di notifiche. Semplice ma
+poco flessibile.
+
+
+  Notificatore conosce notificato
+
+Notificato fa un semplice "subscribe" sul notificatore per ricevere notifiche:
+è quest'ultimo che decide quali notifiche devono essere inviate e quando.
+Intelligenza nel notificatore, non sempre possibile che conosca tutti gli
+altri oggetti.
+
+
+  Notificato conosce notificatore
+
+Il notificatore è molto generale e non conosce i notificati. Il notificato
+deve operare un "subscribe" più complesso che specifichi in che occasioni
+vuole essere notificato e che messaggio vuole che gli venga inviato.
+Complesso! Definire "occasione".
+
+  Ok, definizione di "occasione"
+
+Il notificatore decide quali delle situazioni in cui può trovarsi vuole che
+siano notificabili ai notificati. La lista di queste azioni deve essere
+consultabile. Un notificato può consultare la lista e scegliere di fare
+"subscribe" in una di queste situazioni, specificando la notifica che vuole
+ricevere.
+
+Esempio: un Buffer può avere le seguenti situazioni importanti:
+- elemento-aggiunto
+- elemento-rimosso
+- buffer-pieno
+- buffer-vuoto
+- distrutto
+
+Un Allarme può consultare la lista e scegliere di fare subscribe alla
+situazione "buffer-pieno" chiedendo di ricevere la notifica "allarme-rosso".
+Di fatto, per mezzo del "subscribe", Allarme specifica quale callback
+chiamare, in questo caso "allarme-rosso", quando Buffer si trova nella
+gestione della situazione "buffer-pieno".
+
+  Notifica distruzione oggetti
+
+Tutti gli oggetti che usano le notifiche devono notificare tutti gli altri
+oggetti coinvolti nel momento in cui vengono distrutti: altrimenti in
+linguaggi come C e C++ si ha una dangling reference, in linguaggi con garbage
+collection si ha un memory leak.
+
+Questo significa che non c'è distinzione tra Notificatori e Notificati:
+l'interfaccia è unica sia per chi riceve che per chi invia notifiche.
