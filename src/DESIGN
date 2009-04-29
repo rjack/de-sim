@@ -34,8 +34,21 @@ il dettaglio di rappresentazione voluto.
 Object
 - imminent-event () -> event, owner
 - destroy ()
-- notify (msg, args) -> bool
-- available-notifications () -> lista di messaggi conosciuti
+  ; distrugge l'oggetto e notifica della distruzione tutti gli oggetti che lo
+  ; conoscono.
+- notify (src, msg, args) -> t
+  ; invia una notifica all'oggetto, di mittente src e argomenti args.
+  ; solleva un errore se la notifica è sconosciuta
+- observable-actions () -> list
+  ; ritorna la lista di azioni osservabili
+- subscribe (obj, action, tellback) -> t
+  ; errori: no such action
+  ; registra obj come osservatore di action: quando questa si verifica a obj
+  ; viene inviata la notifica tellback.
+- unsubscribe (obj, action) -> t
+  ; errori: no such action, not subscribed
+  ; revoca la sottoscrizione di obj all'azione action: quando questa si
+  ; verifica obj non verrà più notificato.
 
 Simulated (Object)
 = imminent-event ()
