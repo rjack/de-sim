@@ -44,24 +44,9 @@
 (in-package :de-sim.core)
 
 
-(let ((clock 0))
-
-  (defun gettime ()
-    clock))
-
-
-(defgeneric imminent-event (obj)
-  (:documentation "Returns time, action and owner of the next event to
-  be executed belonging to obj."))
-
-
-(defgeneric notifications (obj)
-  (:documentation "Return the list of the notifications that can be
-  sent to obj."))
-
-
-(defgeneric observable-states (obj)
-  (:documentation "Return the list of obj's observable states."))
+(defgeneric imminent-event-time (obj)
+  (:documentation "Returns time and owner of the next event to be
+  executed belonging to obj."))
 
 
 (defgeneric subscribe (sub obj state notification)
@@ -74,13 +59,45 @@
   obj will be in the specified state."))
 
 
+(defgeneric n-event-choosed (obj)
+  (:documentation "Notify obj that its imminent event has been choosed
+  for being executed."))
+
+
+(defgeneric n-destroy (obj)
+  (:documentation "Notify obj that it's about to be destroyed."))
+
+
+
 (defclass identifiable ()
   ((id
-    :initarg :id
-    :initform (error ":id missing")
     :accessor id-of
     :type fixnum
     :documentation "Unique id")))
+
+
+(let ((id-counter 0))
+
+  (defmethod initialize-instance :after ((obj identifiable) &key)
+    (setf (id-of obj)
+	  (incf id-counter))))
+
+
+
+
+(defclass event (identifiable)
+  ((time
+    :initarg :time
+    :initform (error ":time missing")
+    :accessor time-of
+    :type fixnum)
+   (action
+    :initarg :action
+    :initform (error ":action missing")
+    :accessor action-of
+    :type function)))
+
+
 
 
 (defclass object (identifiable)
@@ -90,18 +107,40 @@
     :accessor description-of
     :type string)
    (events
-    :initarg :events
-    :initform (error "missing :events")
+    :initform (list)
     :accessor events-of
+    :type list)
+   (observable-states
+    :initform (list)
+    :accessor observable-states-of
+    :type list)
+   (notifications
+    :initform (list)
+    :accessor notifications-of
     :type list)))
 
 
-(defclass simulator (object)
-  ((objects
-    :initarg :objects
-    :initform ()
-    :type list)))
+(defmethod imminent-event-time ((obj object))
+  (values (time-of (first (events-of obj)))
+	  obj))
 
 
-(defclass simulated (object)
-  nil)
+(defmethod n-event-choosed ((obj object))
+  (let ((ev (pop (events-of obj))))
+    (declare (type event ev))
+    (funcall (action-of ev) obj)))
+
+
+(let ((clock 0))
+
+  (defun gettime ()
+    clock)
+
+
+  (defun run-step (obj)
+    (declare (type object obj))
+    (multiple-value-bind (time owner)
+	(imminent-event-time obj)
+      (declare (type fixnum time) (type object owner))
+      (setf clock time)
+      (n-event-choosed owner))))
