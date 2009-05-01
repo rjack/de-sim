@@ -45,8 +45,12 @@
 
 
 (defgeneric imminent-event-time (obj)
-  (:documentation "Returns time and owner of the next event to be
+  (:documentation "Return time and owner of the next event to be
   executed belonging to obj."))
+
+
+(defgeneric subscribable-states (obj)
+  (:documentation "Return the list of subscribable states of obj."))
 
 
 (defgeneric subscribe (sub obj state notification)
@@ -110,14 +114,19 @@
     :initform (list)
     :accessor events-of
     :type list)
-   (observable-states
-    :initform (list)
-    :accessor observable-states-of
-    :type list)
+   (subscriptions
+    :initform (make-hash-table)
+    :reader subscriptions-of)
    (notifications
     :initform (list)
     :accessor notifications-of
     :type list)))
+
+
+(defmethod initialize-instance :after ((obj object) &key)
+  (dolist (ss (subscribable-states obj))
+    (setf (gethash ss (subscriptions-of obj))
+	  (list))))
 
 
 (defmethod imminent-event-time ((obj object))
@@ -129,6 +138,38 @@
   (let ((ev (pop (events-of obj))))
     (declare (type event ev))
     (funcall (action-of ev) obj)))
+
+
+(defmethod subscribable-states ((obj object))
+  (list))
+
+
+(defmethod subscribed? ((sub object) (obj object) state)
+  (multiple-value-bind (subscribers state-present?)
+      (gethash state (subscriptions-of obj))
+    (if (not state-present?)
+	(error "not a valid state")
+	(not (null (find sub subscribers))))))
+
+
+(defmethod subscribe ((sub object) (obj object) state notification)
+  (if (subscribed? sub obj state)
+      (error "already subscribed to state")
+      (not (null (push `(,sub . ,notification)
+		       (gethash state
+				(subscriptions-of obj)))))))
+
+
+(defmethod unsubscribe ((sub object) (obj object) state)
+  (if (not (subscribed? sub obj state))
+      (error "not suscribed to state")
+      (setf (gethash state
+		     (subscriptions-of obj))
+	    (delete sub (gethash state
+				 (subscriptions-of obj))
+		    :key #'car))))
+
+
 
 
 (let ((clock 0))
