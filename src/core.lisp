@@ -58,6 +58,11 @@
   specified notification when obj will be in the specified state."))
 
 
+(defgeneric subscribed? (sub obj state)
+  (:documentation "Return t if sub is subscribed to obj's state, nil
+  otherwise"))
+
+
 (defgeneric unsubscribe (sub obj state)
   (:documentation "After this call sub will be no more notified when
   obj will be in the specified state."))
