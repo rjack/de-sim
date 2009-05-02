@@ -85,15 +85,6 @@
     :documentation "Unique id")))
 
 
-(let ((id-counter 0))
-
-  (defmethod initialize-instance :after ((obj identifiable) &key)
-    (setf (id-of obj)
-	  (incf id-counter))))
-
-
-
-
 (defclass event (identifiable)
   ((time
     :initarg :time
@@ -105,6 +96,13 @@
     :initform (error ":action missing")
     :accessor action-of
     :type function)))
+
+
+(let ((id-counter 0))
+
+  (defmethod initialize-instance :after ((ev event) &key)
+    (setf (id-of ev)
+	  (incf id-counter))))
 
 
 
@@ -128,10 +126,14 @@
     :type list)))
 
 
-(defmethod initialize-instance :after ((obj object) &key)
-  (dolist (ss (subscribable-states obj))
-    (setf (gethash ss (subscriptions-of obj))
-	  (list))))
+(let ((id-counter 0))
+
+    (defmethod initialize-instance :after ((obj object) &key)
+      (setf (id-of obj)
+	    (incf id-counter))
+      (dolist (ss (subscribable-states obj))
+	(setf (gethash ss (subscriptions-of obj))
+	      (list)))))
 
 
 (defmethod imminent-event-time ((obj object))
