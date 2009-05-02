@@ -38,53 +38,32 @@
 (in-package :de-sim.test.core)
 
 
-(defparameter *times* 1000)
+(defclass foo-object (object)
+  (foo-slot))
 
 
-(define-test world-make-instance
-    (let ((w (make-instance 'world :id 0 :clock 100 :events nil)))
-      (assert-true (typep w 'world))
-      (assert-eql 0 (id-of w))
-      (assert-eql 100 (clock-of w))
-      (assert-eql nil (events-of w))))
+(defclass foo-event (event)
+  (foo-slot))
 
 
-(define-test event-make-instance
-    (labels ((action-foo ()
-	       nil))
-      (let ((ev (make-instance 'event :id 0 :time 12 :action #'action-foo)))
-	(assert-true (typep ev 'event))
-	(assert-eql 0 (id-of ev))
-	(assert-eql 12 (time-of ev))
-	(assert-eql #'action-foo (action-of ev)))))
+(defun collect-list (size fun)
+  (labels ((collect-list-tr (i size fun lst)
+	     (if (< i size)
+		 (collect-list-tr (1+ i) size fun (cons (funcall fun)
+							lst))
+		 (nreverse lst))))
+    (collect-list-tr 0 size fun (list))))
 
 
-(define-test schedule
-    (let ((w (make-instance 'world :id 0 :events nil)))
-      (dotimes (i *times*)
-	(assert-eql i (length (events-of w)))
-	(schedule w (make-instance 'event :id i :time (random 1000) :action #'break))
-	(assert-eql (1+ i) (length (events-of w)))
-	(assert-true (apply #'<= (map 'list #'time-of (events-of w)))))))
-
-
-(define-test next
-    (with-open-file (*standard-output* "/dev/null" :direction :output :if-exists :overwrite)
-      (let ((w (make-instance 'world :id 0 :events nil))
-	    (clock -1)
-	    (count 0))
-	(labels ((action (world)
-		   (incf count)
-		   (setf clock (clock-of world)))
-		 (run-all (world)
-		   (when (not (zerop (length (events-of world))))
-		     (let ((new-world (next w)))
-		       (assert-eql clock (clock-of new-world))
-		       (run-all new-world)))))
-	  (dotimes (i *times*)
-	    (schedule w (make-instance 'event :id i :time i :action #'action)))
-	  (run-all w)
-	  (assert-eql *times* count)))))
-
+(define-test unique-ids
+  (let ((events (collect-list 1000 (lambda ()
+				     (make-instance 'foo-event :time 0
+						    :action #'null))))
+	(objects (collect-list 1000 (lambda ()
+				      (make-instance 'foo-object)))))
+    (assert-equal events
+		  (remove-duplicates events :key #'id-of))
+    (assert-equal objects
+		  (remove-duplicates objects :key #'id-of))))
 
 (run-tests)
