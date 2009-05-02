@@ -145,6 +145,10 @@
     (funcall (action-of ev) obj)))
 
 
+(defmethod n-destroy ((obj object))
+  nil)
+
+
 (defmethod subscribable-states ((obj object))
   (list))
 
