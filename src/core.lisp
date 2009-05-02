@@ -33,7 +33,14 @@
 (defpackage :org.altervista.rjack.de-sim.core
   (:nicknames :de-sim.core)
   (:use :common-lisp)
-  (:export))
+  (:export :imminent-event-time
+	   :subscribable-states :subscribed? :subscribe :unsubscribe
+	   :n-event-choosed :n-destroy
+	   :id-of
+	   :event :time-of :action-of
+	   :object :description-of :events-of :subscriptions-of
+	           :notifications-of
+	   :gettime :run-step))
 
 
 ;; OVERVIEW
