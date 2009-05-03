@@ -71,6 +71,10 @@
   otherwise"))
 
 
+(defgeneric notify-subscribed (object state)
+  (:documentation "Notify all the subscribers of object's state"))
+
+
 (defgeneric unsubscribe (sub obj state)
   (:documentation "After this call sub will be no more notified when
   obj will be in the specified state."))
