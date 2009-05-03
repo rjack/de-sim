@@ -134,7 +134,13 @@
 
 
 (defmethod n-input-started ((buf buffer) (incoming object))
-  nil)
+  (if (not (null (incoming-element-of buf)))
+      (error "input busy")
+      (let ((delay (/ (size buf)
+		      (incoming-bandwidth-of buf))))
+	(setf (incoming-element-of buf)
+	      incoming)
+	delay)))
 
 
 (defmethod n-input-ended ((buf buffer) (incoming object))
