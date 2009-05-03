@@ -120,7 +120,13 @@
 
 
 (defmethod n-removed ((buf buffer))
-  nil)
+  (if (null (elements-of buf))
+      (error "cannot remove, buffer empty")
+      (let ((popped (pop (elements-of buf))))
+	(notify-subscribed buf :item-removed)
+	(when (zerop (size buf))
+	  (notify-subscribed buf :buffer-empty))
+	popped)))
 
 
 (defmethod n-bandwidth-changed ((buf buffer) (bw fixnum))
