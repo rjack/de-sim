@@ -57,16 +57,30 @@
 		    #'n-input-ended
 		    #'n-output-started
 		    #'n-output-ended))
-   (bandwidth
-    :initarg :bandwidth
+   (incoming-bandwidth
+    :initarg :incoming-bandwidth
     :initform -1
-    :accessor bandwidth-of
+    :accessor incoming-bandwidth-of
+    :type fixnum
+    :documentation "Negative means infinite")
+   (outgoing-bandwidth
+    :initarg :outgoing-bandwidth
+    :initform -1
+    :accessor outgoing-bandwidth-of
     :type fixnum
     :documentation "Negative means infinite")
    (elements
     :initform (list)
     :accessor elements-of
     :type list)
+   (outgoing-element
+    :initform nil
+    :accessor outgoing-element-of
+    :type object)
+   (incoming-element
+    :initform nil
+    :accessor incoming-element-of
+    :type object)
    (size-fn
     :initarg :size-fn
     :initform (error ":size-fn missing")
