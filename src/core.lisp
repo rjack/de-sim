@@ -38,8 +38,9 @@
 	   :n-event-choosed :n-destroy
 	   :id-of
 	   :event :time-of :action-of
-	   :object :description-of :events-of :subscriptions-of
-	           :notifications-of
+	   :object :description :description-of :events-of
+	           :subscriptions-of :notifications :notifications-of
+		   :notify-subscribed
 	   :gettime :run-step))
 
 
