@@ -167,7 +167,7 @@
       (gethash state (subscriptions-of obj))
     (if (not state-present?)
 	(error "not a valid state")
-	(not (null (find sub subscribers))))))
+	(not (null (find sub subscribers :key #'car))))))
 
 
 (defmethod subscribe ((sub object) (obj object) state notification)
