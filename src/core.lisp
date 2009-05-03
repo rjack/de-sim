@@ -170,6 +170,16 @@
 	(not (null (find sub subscribers :key #'car))))))
 
 
+(defmethod notify-subscribed ((obj object) state)
+  (multiple-value-bind (subscribers state-present?)
+      (gethash state (subscriptions-of obj))
+    (if (not state-present?)
+	(error "not a valid state")
+	(dolist (sub subscribers)
+	  (funcall (cdr sub)
+		   (car sub))))))
+
+
 (defmethod subscribe ((sub object) (obj object) state notification)
   (if (subscribed? sub obj state)
       (error "already subscribed to state")
