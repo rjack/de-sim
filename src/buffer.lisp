@@ -32,7 +32,7 @@
 
 (defpackage :org.altervista.rjack.de-sim.buffer
   (:nicknames :de-sim.buffer)
-  (:use :common-lisp :de-sim.core)
+  (:use :common-lisp :de-sim.core :de-sim.util)
   (:export))
 
 
@@ -43,6 +43,49 @@
 
 (in-package :de-sim.buffer)
 
+
+
+(defgeneric fits? (buf obj)
+  (:documentation "Return T if buf has enough room to accomodate obj,
+  NIL otherwise"))
+
+
+(defgeneric full? (buf)
+  (:documentation "Return T if buf is full."))
+
+
+(defgeneric empty? (buf)
+  (:documentation "Return T if buf is empty."))
+
+
+(defgeneric n-inserted (buf new)
+  (:documentation "Notifies the insertion of new into buf."))
+
+
+(defgeneric n-removed (buf)
+  (:documentation "Notifies the removal of the first element of
+  buf.
+  Returns: the removed element.
+  Signals: error-empty."))
+
+
+(defgeneric n-input-bandwidth-changed (buf new-bw)
+  (:documentation "Notifies that buf's new input bandwidth has the new
+  value new-bw.
+  Returns: nil
+  Signals: error-bad-value."))
+
+
+(defgeneric n-output-bandwidth-changed (buf new-bw)
+  (:documentation "Notifies that buf's new output bandwidth has the
+  new value new-bw.
+  Returns: nil
+  Signals: error-bad-value."))
+
+
+(defgeneric n-input-started (buf obj)
+  (:documentation "Notifies that the input process of obj into buf has
+  started."))
 
 
 
@@ -93,8 +136,19 @@
     :documentation "Negative means infinite")))
 
 
-(defmethod size ((buf buffer))
-  (reduce #'+ (elements-of buf) :key (size-fn-of buf)))
+(defmethod fits? ((buf buffer) (obj object))
+  (> (capacity-of buf)
+     (+ (size obj)
+	(size (elements-of buf)))))
+
+
+(defmethod full? ((buf buffer))
+  (= (size (elements-of buf))
+     (capacity-of buf)))
+
+
+(defmethod empty? ((buf buffer))
+  (zerop (size (elements-of buf))))
 
 
 (defmethod subscribable-states ((buf buffer))
@@ -105,17 +159,14 @@
 
 
 (defmethod n-inserted ((buf buffer) (new object))
-  (if (> (+ (funcall (size-fn-of buf) new)
-	    (size buf))
-	 (capacity-of buf))
+  (if (not (fits? buf new))
       (error "new object does not fit")
       (progn
 	(setf (elements-of buf)
 	      (append (elements-of buf)
 		      (list new)))
 	(notify-subscribed buf :item-inserted)
-	(when (= (size buf)
-		 (capacity-of buf))
+	(when
 	  (notify-subscribed buf :buffer-full)))))
 
 
@@ -129,7 +180,11 @@
 	popped)))
 
 
-(defmethod n-bandwidth-changed ((buf buffer) (bw fixnum))
+(defmethod n-input-bandwidth-changed ((buf buffer) (bw fixnum))
+  nil)
+
+
+(defmethod n-output-bandwidth-changed ((buf buffer) (bw fixnum))
   nil)
 
 
@@ -139,8 +194,9 @@
       (let ((delay (/ (size buf)
 		      (incoming-bandwidth-of buf))))
 	(setf (incoming-element-of buf)
-	      incoming)
-	delay)))
+	      incoming))))
+;; TODO after delay, check that input is really finished.
+;; schedule buf #'check-input-ended
 
 
 (defmethod n-input-ended ((buf buffer) (incoming object))

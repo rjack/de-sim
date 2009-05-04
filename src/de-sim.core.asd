@@ -10,5 +10,6 @@
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
     :components ((:file "core")
+		 (:file "util")
 		 (:file "buffer"
-			:depends-on ("core"))))
+			:depends-on ("core" "util"))))
