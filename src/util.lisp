@@ -63,6 +63,9 @@
       (error "scheduling in the past")
       (setf (events-of obj)
 	    (sort (cons (apply #'make-instance 'event
+			       ;; if args? is nil, event's args slot
+			       ;; must not be bound: suitably consing
+			       ;; argument list for make-instance.
 			       (cons (list :time (+ (gettime)
 						    delay)
 					   :fn fn)
