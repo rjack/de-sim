@@ -38,11 +38,21 @@
 
 ;; OVERVIEW
 
-;; TODO
+;; Public notifications (other objects can use these notifications on
+;; buffer)
+
+; n-input-started
+; n-input-ended
+; n-output-started
+; n-output-ended
+
+;; Private notifications
+
+; n-input-should-end
+; n-output-should-end
 
 
 (in-package :de-sim.buffer)
-
 
 
 (defgeneric fits? (buf obj)
@@ -95,15 +105,16 @@
    (de-sim.core:notifications
     :initform (list #'n-inserted
 		    #'n-removed
-		    #'n-bandwidth-changed
+		    #'n-input-bandwidth-changed
+		    #'n-output-bandwidth-changed
 		    #'n-input-started
 		    #'n-input-ended
 		    #'n-output-started
 		    #'n-output-ended))
-   (incoming-bandwidth
-    :initarg :incoming-bandwidth
+   (input-bandwidth
+    :initarg :input-bandwidth
     :initform -1
-    :accessor incoming-bandwidth-of
+    :accessor input-bandwidth-of
     :type fixnum
     :documentation "Negative means infinite")
    (outgoing-bandwidth
@@ -192,11 +203,10 @@
   (if (not (null (incoming-element-of buf)))
       (error "input busy")
       (let ((delay (/ (size buf)
-		      (incoming-bandwidth-of buf))))
+		      (input-bandwidth-of buf))))
 	(setf (incoming-element-of buf)
-	      incoming))))
-;; TODO after delay, check that input is really finished.
-;; schedule buf #'check-input-ended
+	      incoming)
+	(schedule buf delay #'n-input-should-end))))
 
 
 (defmethod n-input-ended ((buf buffer) (incoming object))
