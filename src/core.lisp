@@ -90,6 +90,7 @@
 
 
 
+
 (defclass identifiable ()
   ((id
     :accessor id-of
@@ -103,11 +104,15 @@
     :initform (error ":time missing")
     :accessor time-of
     :type fixnum)
-   (action
+   (fn
     :initarg :action
     :initform (error ":action missing")
-    :accessor action-of
-    :type function)))
+    :accessor fn-of
+    :type function)
+   (args
+    :initarg :args
+    :accessor args-of
+    :type list)))
 
 
 (let ((id-counter 0))
