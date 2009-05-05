@@ -32,8 +32,9 @@
 
 (defpackage :org.altervista.rjack.de-sim.util
   (:nicknames :de-sim.util)
-  (:use :common-lisp)
-  (:export :size))
+  (:use :common-lisp :de-sim.core)
+  (:export :schedule
+	   :size))
 
 
 ;; OVERVIEW
@@ -44,9 +45,29 @@
 (in-package :de-sim.util)
 
 
-(defgeneric size (obj)
-  (:documentation "Return obj's size."))
+ (defgeneric schedule (obj delay fn &optional args)
+   (:documentation "Schedule a new event."))
 
 
-(defmethod size ((ls list))
-  (reduce #'+ ls :key #'size))
+ (defgeneric size (obj)
+   (:documentation "Return obj's size."))
+
+
+ (defmethod size ((ls list))
+   (reduce #'+ ls :key #'size))
+
+
+(defmethod schedule ((obj object) (delay fixnum) (fn function)
+		     &optional (args nil args?))
+  (if (< delay 0)
+      (error "scheduling in the past")
+      (setf (events-of obj)
+	    (sort (cons (apply #'make-instance 'event
+			       (cons (list :time (+ (gettime)
+						    delay)
+					   :fn fn)
+				     (if args?
+					 (list :args args)
+					 nil)))
+			(events-of obj))
+		  #'< :key #'time-of))))
