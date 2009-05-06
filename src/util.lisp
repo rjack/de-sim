@@ -77,11 +77,11 @@
 			       ;; if args? is nil, event's args slot
 			       ;; must not be bound: suitably consing
 			       ;; argument list for make-instance.
-			       (cons (list :time (+ (gettime)
-						    delay)
-					   :fn fn)
-				     (if args?
-					 (list :args args)
-					 nil)))
+			       (append (list :time (+ (gettime)
+						      delay)
+					     :fn fn)
+				       (if args?
+					   (list :args args)
+					   nil)))
 			(events-of obj))
 		  #'< :key #'time-of))))
