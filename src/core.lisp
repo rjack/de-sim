@@ -37,7 +37,7 @@
 	   :subscribable-states :subscribed? :subscribe :unsubscribe
 	   :n-event-choosed :n-destroy
 	   :id-of
-	   :event :time-of :action-of
+	   :event :time-of :fn-of :args-of
 	   :object :description :description-of :events-of
 	           :subscriptions-of :notifications :notifications-of
 		   :notify-subscribed
@@ -161,7 +161,8 @@
 (defmethod n-event-choosed ((obj object))
   (let ((ev (pop (events-of obj))))
     (declare (type event ev))
-    (funcall (action-of ev) obj)))
+    (apply (fn-of ev)
+	   (args-of ev))))
 
 
 (defmethod n-destroy ((obj object))
