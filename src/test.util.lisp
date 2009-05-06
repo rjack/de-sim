@@ -46,11 +46,45 @@
 
 
 (define-test schedule
-  ;; must raise an error with negative delay
-  ;; must insert events in order
-  ;; must find what have inserted
-  ;; length must be consistent with number of insertions
-  ;; args-of must be unbound if unspecified as parameter of schedule
-  (assert-true nil "TODO"))
+  (let ((number-of-events 1000))
+    (let ((obj (make-instance 'object))
+	  (times (collect-list number-of-events (lambda ()
+						  (random 100))))
+	  (functs (collect-list number-of-events (lambda ()
+						   (if (< (random 100)
+							  50)
+						       #'null
+						       #'zerop)))))
+      ;; must reject negative delays (scheduling in the past)
+      (assert-error 'error (schedule obj -1 #'null))
+
+      ;; schedule events
+      (mapc (lambda (time fun)
+	      (schedule obj time fun))
+	    times functs)
+
+      ;; must order events ordered by time, ascending
+      (assert-true (apply #'<= (mapcar #'time-of (events-of obj)))
+		   (mapcar #'time-of (events-of obj)))
+      ;; must be able to find what has been inserted
+
+      (let ((null-evs (remove-if (lambda (x)
+				   (not (eql x #'null)))
+				 (events-of obj) :key #'fn-of))
+	    (zerop-evs (remove-if (lambda (x)
+				    (not (eql x #'zerop)))
+				  (events-of obj) :key #'fn-of)))
+	(assert-equal number-of-events
+		      (+ (length null-evs)
+			 (length zerop-evs))))
+
+      ;; args-of must be unbound if not specified as parameter of schedule
+      (schedule obj 100 #'car)
+      (let ((ev (find #'car (events-of obj) :key #'fn-of)))
+	(assert-false (slot-boundp ev 'de-sim.core::args)))
+
+      (schedule obj 100 #'cdr '(foo-arg baz-arg))
+      (let ((ev (find #'cdr (events-of obj) :key #'fn-of)))
+	(assert-true (slot-boundp ev 'de-sim.core::args))))))
 
 (run-tests)
