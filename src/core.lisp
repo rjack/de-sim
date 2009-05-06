@@ -105,7 +105,7 @@
     :accessor time-of
     :type fixnum)
    (fn
-    :initarg :action
+    :initarg :fn
     :initform (error ":action missing")
     :accessor fn-of
     :type function)
