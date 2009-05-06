@@ -33,7 +33,8 @@
 (defpackage :org.altervista.rjack.de-sim.util
   (:nicknames :de-sim.util)
   (:use :common-lisp :de-sim.core)
-  (:export :schedule
+  (:export :collect-list
+	   :schedule
 	   :size))
 
 
@@ -45,16 +46,26 @@
 (in-package :de-sim.util)
 
 
- (defgeneric schedule (obj delay fn &optional args)
-   (:documentation "Schedule a new event."))
+(defun collect-list (size fun)
+  (declare (type fixnum size) (type function fun))
+  (labels ((collect-list-tr (i size fun lst)
+	     (if (< i size)
+		 (collect-list-tr (1+ i) size fun (cons (funcall fun)
+							lst))
+		 (nreverse lst))))
+    (collect-list-tr 0 size fun (list))))
 
 
- (defgeneric size (obj)
-   (:documentation "Return obj's size."))
+(defgeneric schedule (obj delay fn &optional args)
+  (:documentation "Schedule a new event."))
 
 
- (defmethod size ((ls list))
-   (reduce #'+ ls :key #'size))
+(defgeneric size (obj)
+  (:documentation "Return obj's size."))
+
+
+(defmethod size ((ls list))
+  (reduce #'+ ls :key #'size))
 
 
 (defmethod schedule ((obj object) (delay fixnum) (fn function)

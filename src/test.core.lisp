@@ -32,7 +32,7 @@
 
 (defpackage :org.altervista.rjack.de-sim.test.core
   (:nicknames :de-sim.test.core)
-  (:use :common-lisp :lisp-unit :de-sim.core))
+  (:use :common-lisp :lisp-unit :de-sim.core :de-sim.util))
 
 
 (in-package :de-sim.test.core)
@@ -44,15 +44,6 @@
 
 (defclass foo-event (event)
   (foo-slot))
-
-
-(defun collect-list (size fun)
-  (labels ((collect-list-tr (i size fun lst)
-	     (if (< i size)
-		 (collect-list-tr (1+ i) size fun (cons (funcall fun)
-							lst))
-		 (nreverse lst))))
-    (collect-list-tr 0 size fun (list))))
 
 
 (define-test unique-ids
