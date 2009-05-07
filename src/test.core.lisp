@@ -49,7 +49,7 @@
 (define-test unique-ids
   (let ((events (collect-list 1000 (lambda ()
 				     (make-instance 'foo-event :time 0
-						    :action #'null))))
+						    :fn #'null))))
 	(objects (collect-list 1000 (lambda ()
 				      (make-instance 'foo-object)))))
     (assert-equal events
