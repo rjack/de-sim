@@ -209,6 +209,18 @@
 	(schedule buf delay #'n-input-should-end incoming))))
 
 
+(defmethod n-input-should-end ((buf buffer) (incoming object))
+  (when (and (eql incoming (incoming-element-of buf))
+	     (or (will? buf
+			:at (gettime)
+			:do #'n-input-ended
+			:with (lambda (args)
+				(eql (second args)
+				     incoming)))))
+	  (error "input should have ended!")))
+
+
+
 (defmethod n-input-ended ((buf buffer) (incoming object))
   nil)
 
