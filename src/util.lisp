@@ -56,7 +56,9 @@
     (collect-list-tr 0 size fun (list))))
 
 
-(defgeneric schedule (obj delay fn &optional args)
+
+
+(defgeneric schedule (obj delay fn &rest args)
   (:documentation "Schedule a new event."))
 
 
@@ -69,7 +71,7 @@
 
 
 (defmethod schedule ((obj object) (delay fixnum) (fn function)
-		     &optional (args nil args?))
+		     &rest args)
   (if (< delay 0)
       (error "scheduling in the past")
       (setf (events-of obj)
@@ -80,8 +82,8 @@
 			       (append (list :time (+ (gettime)
 						      delay)
 					     :fn fn)
-				       (if args?
-					   (list :args args)
-					   nil)))
+				       (if (null args)
+					   nil
+					   (list :args args))))
 			(events-of obj))
 		  #'< :key #'time-of))))
