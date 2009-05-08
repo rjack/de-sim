@@ -206,7 +206,7 @@
 		      (input-bandwidth-of buf))))
 	(setf (incoming-element-of buf)
 	      incoming)
-	(schedule buf delay #'n-input-should-end))))
+	(schedule buf delay #'n-input-should-end incoming))))
 
 
 (defmethod n-input-ended ((buf buffer) (incoming object))
