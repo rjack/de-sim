@@ -87,4 +87,48 @@
       (let ((ev (find #'cdr (events-of obj) :key #'fn-of)))
 	(assert-true (slot-boundp ev 'de-sim.core::args))))))
 
+
+(define-test will?
+  (labels ((good-fn () nil)
+	   (bad-fn () nil))
+    (let ((obj (make-instance 'object))
+	  (good-time 10)
+	  (bad-time 11))
+      (schedule obj good-time #'good-fn)
+      (assert-true (will? obj))
+      (assert-true (will? obj :at good-time))
+      (assert-false (will? obj :at bad-time))
+      (assert-true (will? obj :do #'good-fn))
+      (assert-false (will? obj :do #'bad-fn))
+      (assert-true (will? obj :at good-time :do #'good-fn))
+      (assert-false (will? obj :at bad-time :do #'good-fn))
+      (assert-false (will? obj :at good-time :do #'bad-fn))
+      ; next will return false because args is unbound
+      (assert-false (will? obj
+			   :at good-time
+			   :do #'good-fn
+			   :with (lambda (args)
+				   (declare (ignore args))
+				   t)))
+      ; clear event
+      (setf (events-of obj)
+	    nil)
+
+      ; new event with args
+      (schedule obj good-time #'good-fn 0 1 2 3 4 5)
+
+      (assert-true (will? obj
+			  :at good-time
+			  :do #'good-fn
+			  :with (lambda (args)
+				  (= (nth 3 args)
+				     3))))
+      (assert-false (will? obj
+			   :at good-time
+			   :do #'good-fn
+			   :with (lambda (args)
+				   (= (nth 3 args)
+				      0)))))))
+
+
 (run-tests)
