@@ -222,7 +222,15 @@
 
 
 (defmethod n-input-ended ((buf buffer) (incoming object))
-  nil)
+  (if (not (eql incoming
+		(incoming-element-of buf)))
+      (error "input-ended error")
+      (progn
+	(setf (elements-of buf)
+	      (append (elements-of buf)
+		      (list incoming)))
+	(setf (incoming-element-of buf)
+	      nil))))
 
 
 (defmethod n-output-started ((buf buffer) (outgoing object))
