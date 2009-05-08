@@ -35,7 +35,8 @@
   (:use :common-lisp :de-sim.core)
   (:export :collect-list
 	   :schedule
-	   :size))
+	   :size
+	   :will?))
 
 
 ;; OVERVIEW
@@ -66,6 +67,11 @@
   (:documentation "Return obj's size."))
 
 
+(defgeneric will? (obj &key at do with))
+
+
+
+
 (defmethod size ((ls list))
   (reduce #'+ ls :key #'size))
 
@@ -87,3 +93,19 @@
 					   (list :args args))))
 			(events-of obj))
 		  #'< :key #'time-of))))
+
+
+(defmethod will? ((obj object) &key (at -1 at?) (do #'null do?) (with #'null with?))
+  (declare (type fixnum at)
+	   (type function do with))
+  (find-if (lambda (ev)
+	     (and (or (not at?)
+		      (= at
+			 (time-of ev)))
+		  (or (not do?)
+		      (eql do
+			   (fn-of ev)))
+		  (or (not with?)
+		      (and (slot-boundp ev 'de-sim.core::args)
+			   (funcall with (args-of ev))))))
+	   (events-of obj)))
