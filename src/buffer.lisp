@@ -35,6 +35,10 @@
   (:use :common-lisp :de-sim.core :de-sim.util)
   (:export))
 
+(in-package :de-sim.buffer)
+
+
+
 
 ;; OVERVIEW
 
@@ -52,7 +56,6 @@
 ; n-output-should-end
 
 
-(in-package :de-sim.buffer)
 
 
 (defgeneric fits? (buf obj)
@@ -68,34 +71,13 @@
   (:documentation "Return T if buf is empty."))
 
 
-(defgeneric n-inserted (buf new)
-  (:documentation "Notifies the insertion of new into buf."))
+(defgeneric n-input (buf obj)
+  (:documentation "Notifies that buf has received obj."))
 
 
-(defgeneric n-removed (buf)
-  (:documentation "Notifies the removal of the first element of
-  buf.
-  Returns: the removed element.
-  Signals: error-empty."))
+(defgeneric n-output (buf)
+  (:documentation "Notifies that buf should perform output."))
 
-
-(defgeneric n-input-bandwidth-changed (buf new-bw)
-  (:documentation "Notifies that buf's new input bandwidth has the new
-  value new-bw.
-  Returns: nil
-  Signals: error-bad-value."))
-
-
-(defgeneric n-output-bandwidth-changed (buf new-bw)
-  (:documentation "Notifies that buf's new output bandwidth has the
-  new value new-bw.
-  Returns: nil
-  Signals: error-bad-value."))
-
-
-(defgeneric n-input-started (buf obj)
-  (:documentation "Notifies that the input process of obj into buf has
-  started."))
 
 
 
@@ -103,48 +85,22 @@
   ((de-sim.core:description
     :initform "buffer")
    (de-sim.core:notifications
-    :initform (list #'n-inserted
-		    #'n-removed
-		    #'n-input-bandwidth-changed
-		    #'n-output-bandwidth-changed
-		    #'n-input-started
-		    #'n-input-ended
-		    #'n-output-started
-		    #'n-output-ended))
-   (input-bandwidth
-    :initarg :input-bandwidth
-    :initform -1
-    :accessor input-bandwidth-of
-    :type fixnum
-    :documentation "Negative means infinite")
-   (outgoing-bandwidth
-    :initarg :outgoing-bandwidth
-    :initform -1
-    :accessor outgoing-bandwidth-of
-    :type fixnum
-    :documentation "Negative means infinite")
+    :initform (list #'n-input
+		    #'n-output))
+   (de-sim.core:subscribable-states
+    :initform (list :input
+		    :output
+		    :full
+		    :empty))
    (elements
     :initform (list)
     :accessor elements-of
     :type list)
-   (outgoing-element
-    :initform nil
-    :accessor outgoing-element-of
-    :type object)
-   (incoming-element
-    :initform nil
-    :accessor incoming-element-of
-    :type object)
-   (size-fn
-    :initarg :size-fn
-    :initform (error ":size-fn missing")
-    :accessor size-fn-of
-    :type function)
    (capacity
-    :initform -1
+    :initargs :capacity
     :accessor capacity-of
-    :type fixnum
-    :documentation "Negative means infinite")))
+    :type (or (integer 0)
+	      (eql :keyword)))))
 
 
 (defmethod fits? ((buf buffer) (obj object))
@@ -162,80 +118,23 @@
   (zerop (size (elements-of buf))))
 
 
-(defmethod subscribable-states ((buf buffer))
-  (list :item-inserted
-	:item-removed
-	:buffer-full
-	:buffer-empty))
-
-
-(defmethod n-inserted ((buf buffer) (new object))
+(defmethod n-input ((buf buffer) (new object))
   (if (not (fits? buf new))
-      (error "new object does not fit")
+      (error "full")
       (progn
 	(setf (elements-of buf)
 	      (append (elements-of buf)
 		      (list new)))
-	(notify-subscribed buf :item-inserted)
-	(when
-	  (notify-subscribed buf :buffer-full)))))
+	(notify-subscribed buf :input)
+	(when (full? buf)
+	  (notify-subscribed buf :full)))))
 
 
-(defmethod n-removed ((buf buffer))
+(defmethod n-output ((buf buffer))
   (if (null (elements-of buf))
-      (error "cannot remove, buffer empty")
+      (error "empty")
       (let ((popped (pop (elements-of buf))))
-	(notify-subscribed buf :item-removed)
+	(notify-subscribed buf :output)
 	(when (zerop (size buf))
-	  (notify-subscribed buf :buffer-empty))
+	  (notify-subscribed buf :empty))
 	popped)))
-
-
-(defmethod n-input-bandwidth-changed ((buf buffer) (bw fixnum))
-  nil)
-
-
-(defmethod n-output-bandwidth-changed ((buf buffer) (bw fixnum))
-  nil)
-
-
-(defmethod n-input-started ((buf buffer) (incoming object))
-  (if (not (null (incoming-element-of buf)))
-      (error "input busy")
-      (let ((delay (/ (size buf)
-		      (input-bandwidth-of buf))))
-	(setf (incoming-element-of buf)
-	      incoming)
-	(schedule buf delay #'n-input-should-end incoming))))
-
-
-(defmethod n-input-should-end ((buf buffer) (incoming object))
-  (when (and (eql incoming (incoming-element-of buf))
-	     (or (will? buf
-			:at (gettime)
-			:do #'n-input-ended
-			:with (lambda (args)
-				(eql (second args)
-				     incoming)))))
-	  (error "input should have ended!")))
-
-
-
-(defmethod n-input-ended ((buf buffer) (incoming object))
-  (if (not (eql incoming
-		(incoming-element-of buf)))
-      (error "input-ended error")
-      (progn
-	(setf (elements-of buf)
-	      (append (elements-of buf)
-		      (list incoming)))
-	(setf (incoming-element-of buf)
-	      nil))))
-
-
-(defmethod n-output-started ((buf buffer) (outgoing object))
-  nil)
-
-
-(defmethod n-output-ended ((buf buffer) (outgoing object))
-  nil)
