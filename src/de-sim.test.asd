@@ -1,10 +1,10 @@
-(defpackage :asd.test.core
+(defpackage :de-sim.test.asd
   (:use :cl :asdf))
 
-(in-package :asd.test.core)
+(in-package :de-sim.test.asd)
 
 
-(defsystem de-sim.test.core
+(defsystem de-sim.test
     :name "test.core"
     :author "Giacomo Ritucci"
     :version "0.1"

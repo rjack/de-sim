@@ -1,10 +1,10 @@
-(defpackage :asd.core
+(defpackage :de-sim.asd
   (:use :cl :asdf))
 
-(in-package :asd.core)
+(in-package :de-sim.asd)
 
 
-(defsystem de-sim.core
+(defsystem de-sim
     :name "core"
     :author "Giacomo Ritucci"
     :version "0.1"
