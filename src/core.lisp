@@ -94,7 +94,7 @@
 (defclass identifiable ()
   ((id
     :accessor id-of
-    :type fixnum
+    :type (integer 0)
     :documentation "Unique id")))
 
 
@@ -103,7 +103,7 @@
     :initarg :time
     :initform (error ":time missing")
     :accessor time-of
-    :type fixnum)
+    :type (integer 0))
    (fn
     :initarg :fn
     :initform (error ":action missing")
