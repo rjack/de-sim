@@ -34,13 +34,14 @@
   (:nicknames :de-sim.core)
   (:use :common-lisp)
   (:export :imminent-event-time
-	   :subscribable-states :subscribed? :subscribe :unsubscribe
+	   :subscribed? :subscribe :unsubscribe
 	   :n-event-choosed :n-destroy
 	   :id-of
 	   :event :time-of :fn-of :args-of
-	   :object :description :description-of :events-of
-	           :subscriptions-of :notifications :notifications-of
-		   :notify-subscribed
+	   :object :subscribable-states :subscribable-states-of
+	           :description :description-of :events-of
+		   :subscriptions-of :notifications :notifications-of
+	   :notify-subscribed
 	   :gettime :run-step))
 
 
@@ -148,7 +149,7 @@
     (defmethod initialize-instance :after ((obj object) &key)
       (setf (id-of obj)
 	    (incf id-counter))
-      (dolist (ss (subscribable-states obj))
+      (dolist (ss (subscribable-states-of obj))
 	(setf (gethash ss (subscriptions-of obj))
 	      (list)))))
 
@@ -167,10 +168,6 @@
 
 (defmethod n-destroy ((obj object))
   nil)
-
-
-(defmethod subscribable-states ((obj object))
-  (list))
 
 
 (defmethod subscribed? ((sub object) (obj object) state)
