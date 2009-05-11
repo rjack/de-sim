@@ -57,10 +57,6 @@
   executed belonging to obj."))
 
 
-(defgeneric subscribable-states (obj)
-  (:documentation "Return the list of subscribable states of obj."))
-
-
 (defgeneric subscribe (sub obj state notification)
   (:documentation "After this call sub will be notified with the
   specified notification when obj will be in the specified state."))
@@ -140,6 +136,10 @@
    (notifications
     :initform (list)
     :accessor notifications-of
+    :type list)
+   (subscribable-states
+    :initform (list)
+    :accessor subscribable-states-of
     :type list)))
 
 
