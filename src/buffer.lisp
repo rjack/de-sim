@@ -103,6 +103,8 @@
 	      (eql :keyword)))))
 
 
+
+
 (defmethod fits? ((buf buffer) (obj object))
   (> (capacity-of buf)
      (+ (size obj)
