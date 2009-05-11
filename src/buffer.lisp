@@ -33,7 +33,10 @@
 (defpackage :org.altervista.rjack.de-sim.buffer
   (:nicknames :de-sim.buffer)
   (:use :common-lisp :de-sim.core :de-sim.util)
-  (:export))
+  (:export :buffer
+	   :elements-of
+	   :fits? :full? :empty?
+	   :n-input :n-output))
 
 (in-package :de-sim.buffer)
 
@@ -82,12 +85,12 @@
 
 
 (defclass buffer (object)
-  ((de-sim.core:description
+  ((description
     :initform "buffer")
-   (de-sim.core:notifications
+   (notifications
     :initform (list #'n-input
 		    #'n-output))
-   (de-sim.core:subscribable-states
+   (subscribable-states
     :initform (list :input
 		    :output
 		    :full
@@ -95,29 +98,21 @@
    (elements
     :initform (list)
     :accessor elements-of
-    :type list)
-   (capacity
-    :initargs :capacity
-    :accessor capacity-of
-    :type (or (integer 0)
-	      (eql :keyword)))))
+    :type list)))
 
 
 
 
 (defmethod fits? ((buf buffer) (obj object))
-  (> (capacity-of buf)
-     (+ (size obj)
-	(size (elements-of buf)))))
+  t)
 
 
 (defmethod full? ((buf buffer))
-  (= (size (elements-of buf))
-     (capacity-of buf)))
+  nil)
 
 
 (defmethod empty? ((buf buffer))
-  (zerop (size (elements-of buf))))
+  (null (elements-of buf)))
 
 
 (defmethod n-input ((buf buffer) (new object))
