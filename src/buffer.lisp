@@ -132,6 +132,6 @@
       (error "empty")
       (let ((popped (pop (elements-of buf))))
 	(notify-subscribed buf :output)
-	(when (zerop (size buf))
+	(when (empty? buf)
 	  (notify-subscribed buf :empty))
 	popped)))
