@@ -32,7 +32,7 @@
 
 (defpackage :org.altervista.rjack.de-sim.core
   (:nicknames :de-sim.core)
-  (:use :common-lisp)
+  (:use :common-lisp :de-sim.conditions)
   (:export :imminent-event-time
 	   :subscribed? :subscribe :unsubscribe
 	   :n-event-choosed :n-destroy
@@ -174,7 +174,7 @@
   (multiple-value-bind (subscribers state-present?)
       (gethash state (subscriptions-of obj))
     (if (not state-present?)
-	(error "not a valid state")
+	(error 'error-invalid)
 	(not (null (find sub subscribers :key #'car))))))
 
 
@@ -182,7 +182,7 @@
   (multiple-value-bind (subscribers state-present?)
       (gethash state (subscriptions-of obj))
     (if (not state-present?)
-	(error "not a valid state")
+	(error 'error-invalid)
 	(dolist (sub subscribers)
 	  (funcall (cdr sub)
 		   (car sub))))))
@@ -190,7 +190,7 @@
 
 (defmethod subscribe ((sub object) (obj object) state notification)
   (if (subscribed? sub obj state)
-      (error "already subscribed to state")
+      (error 'error-already)
       (not (null (push `(,sub . ,notification)
 		       (gethash state
 				(subscriptions-of obj)))))))
@@ -198,7 +198,7 @@
 
 (defmethod unsubscribe ((sub object) (obj object) state)
   (if (not (subscribed? sub obj state))
-      (error "not suscribed to state")
+      (error 'error-invalid)
       (setf (gethash state
 		     (subscriptions-of obj))
 	    (delete sub (gethash state
