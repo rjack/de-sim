@@ -32,7 +32,7 @@
 
 (defpackage :org.altervista.rjack.de-sim.util
   (:nicknames :de-sim.util)
-  (:use :common-lisp :de-sim.core)
+  (:use :common-lisp :de-sim.core :de-sim.conditions)
   (:export :collect-list
 	   :schedule
 	   :size
@@ -79,7 +79,7 @@
 (defmethod schedule ((obj object) (delay fixnum) (fn function)
 		     &rest args)
   (if (< delay 0)
-      (error "scheduling in the past")
+      (error 'error-invalid)
       (setf (events-of obj)
 	    (sort (cons (apply #'make-instance 'event
 			       ;; if args? is nil, event's args slot
