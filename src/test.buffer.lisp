@@ -32,7 +32,8 @@
 
 (defpackage :org.altervista.rjack.de-sim.test.buffer
   (:nicknames :de-sim.test.buffer)
-  (:use :common-lisp :lisp-unit :de-sim.core :de-sim.util :de-sim.buffer))
+  (:use :common-lisp :lisp-unit
+	:de-sim.core :de-sim.util :de-sim.buffer :de-sim.conditions))
 
 (in-package :de-sim.test.buffer)
 
@@ -128,7 +129,9 @@
 
     ;; now should be empty
     (assert-true (empty? *buf*))
-    ;; and not full (yes, paranoid)
+    ;; let's raise an error, just to be sure
+    (assert-error 'error-empty (n-output *buf*))
+    ;; and should not be full (yes, paranoid)
     (assert-false (full? *buf*))
     ;; all notified?
     (assert-equal (length *items*) *output-count*)

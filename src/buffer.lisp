@@ -32,7 +32,7 @@
 
 (defpackage :org.altervista.rjack.de-sim.buffer
   (:nicknames :de-sim.buffer)
-  (:use :common-lisp :de-sim.core :de-sim.util)
+  (:use :common-lisp :de-sim.core :de-sim.util :de-sim.conditions)
   (:export :buffer
 	   :elements-of
 	   :fits? :full? :empty?
@@ -117,7 +117,7 @@
 
 (defmethod n-input ((buf buffer) (new object))
   (if (not (fits? buf new))
-      (error "full")
+      (error 'error-full)
       (progn
 	(setf (elements-of buf)
 	      (append (elements-of buf)
@@ -129,7 +129,7 @@
 
 (defmethod n-output ((buf buffer))
   (if (null (elements-of buf))
-      (error "empty")
+      (error 'error-empty)
       (let ((popped (pop (elements-of buf))))
 	(notify-subscribed buf :output)
 	(when (empty? buf)

@@ -11,8 +11,9 @@
     :license "2 clauses BSD style, see COPYING file for details"
     :components ((:file "lisp-unit")
 		 (:file "core")
+		 (:file "conditions")
 		 (:file "buffer"
-			:depends-on ("core" "util"))
+			:depends-on ("core" "conditions" "util"))
 		 (:file "util"
 			:depends-on ("core"))
 		 (:file "test.core"
@@ -20,4 +21,4 @@
 		 (:file "test.util"
 			:depends-on ("lisp-unit" "core" "util"))
 		 (:file "test.buffer"
-			:depends-on ("lisp-unit" "core" "util" "buffer"))))
+			:depends-on ("lisp-unit" "core" "conditions" "util" "buffer"))))
