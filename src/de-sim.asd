@@ -9,8 +9,10 @@
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
-    :components ((:file "core")
-		 (:file "conditions")
-		 (:file "util")
+    :components ((:file "conditions")
+		 (:file "core"
+			:depends-on ("conditions"))
+		 (:file "util"
+			:depends-on ("conditions"))
 		 (:file "buffer"
 			:depends-on ("core" "conditions" "util"))))
