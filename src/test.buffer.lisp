@@ -39,36 +39,103 @@
 
 
 
+(defparameter *observer* (make-instance 'object))
+(defparameter *buf* (make-instance 'buffer))
+(defparameter *input-count* 0)
+(defparameter *output-count* 0)
+(defparameter *items* (collect-list 100 (lambda ()
+					  (make-instance 'object))))
+
+
+
+
+(defun input-occurred (obj)
+  (declare (ignore obj))
+  (incf *input-count*))
+
+
+(defun output-occurred (obj)
+  (declare (ignore obj))
+  (incf *output-count*))
+
+
+
+
 (define-test buffer-class
-  (let ((buf (make-instance 'buffer))
-	(items (collect-list 100 (lambda ()
-				   (make-instance 'object)))))
-    ;; subcribable states
-    (assert-equal (list :input :output :full :empty)
-		  (subscribable-states-of buf))
-    ;; notifications
-    (assert-equal (list #'n-input #'n-output)
-		  (notifications-of buf))
 
-    ;; should be empty
-    (assert-true (empty? buf))
+  ;; subcribable states
+  (assert-equal (list :input :output :full :empty)
+		(subscribable-states-of *buf*))
+  ;; notifications
+  (assert-equal (list #'n-input #'n-output)
+		(notifications-of *buf*))
 
-    ;; should be not full
-    (assert-false (full? buf))
+  ;; should be empty
+  (assert-true (empty? *buf*))
 
-    ;; input
-    (dolist (i items)
-      (n-input buf i))
-    (assert-equal items (elements-of buf))
-
-    ;; no more empty
-    (assert-false (empty? buf))
-
-    ;; but never full
-    ;; (can't prove that will be *never* full, you have to trust it).
-    (assert-false (full? buf))))
+  ;; should be not full
+  (assert-false (full? *buf*)))
 
 
 
 
-(run-tests)
+(define-test buffer-subscribe
+
+  ;; observer wants to know when input and output occurr.
+  (assert-true (subscribe *observer* *buf* :input #'input-occurred))
+  (assert-true (subscribe *observer* *buf* :output #'output-occurred))
+
+  ;; subscribing again should raise an error
+  (assert-error 'error (subscribe *observer* *buf* :input #'input-occurred))
+  (assert-error 'error (subscribe *observer* *buf* :output #'output-occurred)))
+
+
+
+
+(define-test buffer-input
+
+  (setf *input-count* 0)
+  (setf *output-count* 0)
+
+  ;; insert all items
+  (dolist (i *items*)
+    (n-input *buf* i))
+
+  ;; same list
+  (assert-equal *items* (elements-of *buf*))
+  ;; all notified?
+  (assert-equal (length *items*) *input-count*)
+  ;; paranoid
+  (assert-equal 0 *output-count*)
+
+  ;; no more empty
+  (assert-false (empty? *buf*))
+
+  ;; but never full
+  ;; (can't prove that will be *never* full).
+  (assert-false (full? *buf*)))
+
+
+
+;; NOTE: run after buffer-input
+(define-test buffer-output
+
+  (let ((removed-items (list)))
+    (dotimes (i (length *items*))
+      (setf removed-items
+	    (append removed-items
+		    (list (n-output *buf*)))))
+
+    ;; now should be empty
+    (assert-true (empty? *buf*))
+    ;; and not full (yes, paranoid)
+    (assert-false (full? *buf*))
+    ;; all notified?
+    (assert-equal (length *items*) *output-count*)
+    ;; removed list is the original one?
+    (assert-equal *items* removed-items)))
+
+
+
+
+(run-tests buffer-class buffer-subscribe buffer-input buffer-output)
