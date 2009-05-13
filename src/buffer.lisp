@@ -41,24 +41,18 @@
 (in-package :de-sim.buffer)
 
 
-
-
 ;; OVERVIEW
 
-;; Public notifications (other objects can use these notifications on
-;; buffer)
+;; This is a simple FIFO buffer with unlimited capacity.
 
-; n-input-started
-; n-input-ended
-; n-output-started
-; n-output-ended
+;; Subscribable states:
+;;
+;; :input      item is inserted
+;; :output     item is removed
+;; :empty      last item is removed
+;; :full       item is inserted and no more can fit
 
-;; Private notifications
-
-; n-input-should-end
-; n-output-should-end
-
-
+;; This buffer never notifies :full, subclasses may do.
 
 
 (defgeneric fits? (buf obj)
