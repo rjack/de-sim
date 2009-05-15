@@ -5,7 +5,7 @@
 
 
 (defsystem de-sim
-    :name "core"
+    :name "de-sim"
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
