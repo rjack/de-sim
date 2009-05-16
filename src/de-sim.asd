@@ -9,10 +9,12 @@
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
-    :components ((:file "conditions")
+    :components ((:file "de-sim.package")
+		 (:file "conditions"
+			:depends-on ("de-sim.package"))
 		 (:file "core"
-			:depends-on ("conditions"))
+			:depends-on ("de-sim.package" "conditions"))
 		 (:file "util"
-			:depends-on ("conditions"))
+			:depends-on ("de-sim.package" "conditions"))
 		 (:file "buffer"
-			:depends-on ("core" "conditions" "util"))))
+			:depends-on ("de-sim.package" "core" "conditions" "util"))))

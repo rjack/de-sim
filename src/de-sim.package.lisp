@@ -30,24 +30,30 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(in-package :de-sim)
-
-
-
-
-;; errors
-
-(define-condition error-full (error)
-  nil)
-
-
-(define-condition error-empty (error)
-  nil)
-
-
-(define-condition error-already (error)
-  nil)
-
-
-(define-condition error-invalid (error)
-  nil)
+(defpackage :org.altervista.rjack.de-sim
+  (:nicknames :de-sim)
+  (:use :common-lisp)
+  (:export
+   ;; conditions.lisp
+   :error-full :error-empty
+   :error-already :error-invalid
+   ;; buffer.lisp
+   :buffer :elements-of
+           :fits? :full? :empty?
+	   :n-input :n-output
+   ;; core.lisp
+   :imminent-event-time
+   :subscribed? :subscribe :unsubscribe
+   :n-event-choosed :n-destroy
+   :id-of
+   :event :time-of :fn-of :args-of
+   :object :subscribable-states :subscribable-states-of
+           :description :description-of :events-of
+           :subscriptions-of :notifications :notifications-of
+           :notify-subscribed
+   :gettime :run-step
+   ;; util.lisp
+   :collect-list
+   :schedule
+   :size
+   :will?))

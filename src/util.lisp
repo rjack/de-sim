@@ -30,21 +30,12 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim.util
-  (:nicknames :de-sim.util)
-  (:use :common-lisp :de-sim.core :de-sim.conditions)
-  (:export :collect-list
-	   :schedule
-	   :size
-	   :will?))
-
-
 ;; OVERVIEW
 
 ;; TODO
 
 
-(in-package :de-sim.util)
+(in-package :de-sim)
 
 
 (defun collect-list (size fun)
@@ -106,6 +97,6 @@
 		      (eql do
 			   (fn-of ev)))
 		  (or (not with?)
-		      (and (slot-boundp ev 'de-sim.core::args)
+		      (and (slot-boundp ev 'args)
 			   (funcall with (args-of ev))))))
 	   (events-of obj)))

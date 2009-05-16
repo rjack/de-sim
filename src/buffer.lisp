@@ -30,15 +30,7 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim.buffer
-  (:nicknames :de-sim.buffer)
-  (:use :common-lisp :de-sim.core :de-sim.util :de-sim.conditions)
-  (:export :buffer
-	   :elements-of
-	   :fits? :full? :empty?
-	   :n-input :n-output))
-
-(in-package :de-sim.buffer)
+(in-package :de-sim)
 
 
 ;; OVERVIEW

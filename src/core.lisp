@@ -30,27 +30,12 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim.core
-  (:nicknames :de-sim.core)
-  (:use :common-lisp :de-sim.conditions)
-  (:export :imminent-event-time
-	   :subscribed? :subscribe :unsubscribe
-	   :n-event-choosed :n-destroy
-	   :id-of
-	   :event :time-of :fn-of :args-of
-	   :object :subscribable-states :subscribable-states-of
-	           :description :description-of :events-of
-		   :subscriptions-of :notifications :notifications-of
-	   :notify-subscribed
-	   :gettime :run-step))
-
-
 ;; OVERVIEW
 
 ;; TODO
 
 
-(in-package :de-sim.core)
+(in-package :de-sim)
 
 
 (defgeneric imminent-event-time (obj)
