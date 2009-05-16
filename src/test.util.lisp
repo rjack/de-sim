@@ -30,12 +30,7 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim.test.util
-  (:nicknames :de-sim.test.util)
-  (:use :common-lisp :lisp-unit :de-sim.core :de-sim.util))
-
-
-(in-package :de-sim.test.util)
+(in-package :de-sim.test)
 
 
 (define-test collect-list
@@ -81,11 +76,11 @@
       ;; args-of must be unbound if not specified as parameter of schedule
       (schedule obj 100 #'car)
       (let ((ev (find #'car (events-of obj) :key #'fn-of)))
-	(assert-false (slot-boundp ev 'de-sim.core::args)))
+	(assert-false (slot-boundp ev 'de-sim::args)))
 
       (schedule obj 100 #'cdr '(foo-arg baz-arg))
       (let ((ev (find #'cdr (events-of obj) :key #'fn-of)))
-	(assert-true (slot-boundp ev 'de-sim.core::args))))))
+	(assert-true (slot-boundp ev 'de-sim::args))))))
 
 
 (define-test will?

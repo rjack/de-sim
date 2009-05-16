@@ -30,12 +30,7 @@
 (declaim (optimize debug safety (speed 0)))
 
 
-(defpackage :org.altervista.rjack.de-sim.test.buffer
-  (:nicknames :de-sim.test.buffer)
-  (:use :common-lisp :lisp-unit
-	:de-sim.core :de-sim.util :de-sim.buffer :de-sim.conditions))
-
-(in-package :de-sim.test.buffer)
+(in-package :de-sim.test)
 
 
 

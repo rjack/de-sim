@@ -9,17 +9,12 @@
     :author "Giacomo Ritucci"
     :version "0.1"
     :license "2 clauses BSD style, see COPYING file for details"
+    :depends-on ("de-sim")
     :components ((:file "lisp-unit")
-		 (:file "conditions")
-		 (:file "core"
-			:depends-on ("conditions"))
-		 (:file "buffer"
-			:depends-on ("core" "conditions" "util"))
-		 (:file "util"
-			:depends-on ("core" "conditions"))
+		 (:file "de-sim.test.package")
 		 (:file "test.core"
-			:depends-on ("lisp-unit" "core" "util"))
+			:depends-on ("lisp-unit" "de-sim.test.package"))
 		 (:file "test.util"
-			:depends-on ("lisp-unit" "core" "util"))
+			:depends-on ("lisp-unit" "de-sim.test.package"))
 		 (:file "test.buffer"
-			:depends-on ("lisp-unit" "core" "conditions" "util" "buffer"))))
+			:depends-on ("lisp-unit" "de-sim.test.package"))))
