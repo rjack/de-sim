@@ -1,14 +1,43 @@
+(declaim (optimize debug safety (speed 0)))
+
+
 (defpackage :pseudo-desim
   (:use :cl))
 
 
+(deftype id-type ()
+  '(integer 0))
+
+
+(deftype revision-type ()
+  '(integer 0))
+
+
+(deftype time-type ()
+  '(integer 0))
+
+
+(deftype exec-time-type ()
+  `(or time-type
+       (member :never)))
+
+
 (defclass identifiable ()
-  ((id :initarg :id)
-   (version :initarg :version)))
+  ((id :initarg :id :type id-type)
+   (version :initarg :version :type version-type)))
+
 
 
 (defclass object (identifiable)
-  nil)
+  ((inputs)
+   (outputs)))
+
+
+(defclass event ()
+  ((owner :initarg :owner :reader owner :type id-type)
+   (exec-time :initarg :exec-time :reader exec-time)
+   (fn :initarg :fn :reader fn)
+   (args :initarg :args :reader args)))
 
 
 (defclass connector (identifiable)
@@ -24,25 +53,16 @@
 		 :bandwidth :infinite)))
 
 
-;; ogni object potrebbe estendere event anche solo per aver un modo
-;; per riconoscere il tipo dei propri eventi
-(defclass event ()
-  ((owner :initarg :owner :reader owner)
-   (exec-time :initarg :exec-time :reader exec-time)
-   (fn :initarg :fn :reader fn)
-   (args :initarg :args :reader args)))
-
-
 (defun run (ev objs)
   (apply (fn ev) (find-if (applicable ev) objs)))
 
 
-(defun evolve (et evs objs)
+(defun evolve (et evs objs conns)
   (let ((ev (imminent-event et evs)))
     (if (null ev)
 	(error "done")
-	(multiple-value-bind (new-et new-evs new-objs) (run ev objs)
-	  (evolve new-et (merge-evs evs new-evs)
-		  (merge-objs objs new-objs))))))
-
-
+	(multiple-value-bind (new-et new-evs new-objs new-conns) (run ev objs)
+	  (values new-et
+		  (merge-events evs new-evs)
+		  (merge-objects objs new-objs)
+		  (merge-connnectors conns new-conns))))))

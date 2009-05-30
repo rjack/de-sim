@@ -43,9 +43,10 @@
   executed belonging to obj."))
 
 
-(defgeneric subscribe (sub obj state notification)
-  (:documentation "After this call sub will be notified with the
-  specified notification when obj will be in the specified state."))
+(defgeneric set-role (object subject role)
+  (:documentation "Sets subject in relation with object with the
+  specified role. Example: (set-role eth-cable eth0 'device) means
+  that eth0 is the device of eth-cable"))
 
 
 (defgeneric subscribed? (sub obj state)
