@@ -5,12 +5,12 @@
   (:use :cl))
 
 
+(defparameter *out->in* (make-hash-table))
+(defparameter *in->obj* (make-hash-table))
+
+
 (deftype id-type ()
-  '(integer 0))
-
-
-(deftype revision-type ()
-  '(integer 0))
+  'keyword)
 
 
 (deftype time-type ()
@@ -22,15 +22,55 @@
        (member :never)))
 
 
-(defclass identifiable ()
-  ((id :initarg :id :type id-type)
-   (version :initarg :version :type version-type)))
+(defclass with-id ()
+  ((id :initarg :id :reader id :type id-type)))
 
 
+(defclass with-name ()
+  ((name :initarg :name :reader name :type string)))
 
-(defclass object (identifiable)
-  ((inputs)
-   (outputs)))
+
+(defclass object (with-id)
+  nil)
+
+
+(defclass input (with-id)
+  nil)
+
+
+(defclass output (with-id)
+  nil)
+
+
+(defclass audio-output (output)
+  nil)
+
+
+(defclass audio-input (input)
+  nil)
+
+
+(defclass with-audio-output ()
+  ((audio> :reader audio-out :type audio-output)))
+
+
+(defclass with-audio-input ()
+  ((audio-in :reader audio-in :type audio-input)))
+
+
+(defclass person (object with-audio-output with-audio-input with-name)
+  nil)
+
+
+(defmethod initialize-instance ((prs person) &key)
+  (setf (slot-value prs 'audio-in)
+	(make-instance 'audio-input))
+  (setf (slot-value prs 'audio-out)
+	(make-instance 'audio-output))
+  (when (and (not (slot-boundp prs 'id))
+	     (slot-boundp prs 'name))
+    (setf (slot-value prs 'id)
+	  (intern (string-upcase (name prs)) 'keyword))))
 
 
 (defclass event ()
@@ -40,17 +80,38 @@
    (args :initarg :args :reader args)))
 
 
-(defclass connector (identifiable)
-  ((from :initarg :from :reader from)
-   (to :initarg :from :reader to)
-   (bandwidth :initarg :bandwidth :reader bandwidth)))
+(defmethod i/o-connect ((out output) (in input))
+  (setf (gethash (id out) *out->in*)
+	in))
 
 
-(defmethod -> ((a object) (b object))
-  (make-instance 'connector
-		 :id (fresh-id) :version 0
-		 :from (id a) :to (id b)
-		 :bandwidth :infinite)))
+(defmethod in ((ai audio-input) (prs person) something)
+  (hear prs something))
+
+
+(defmethod put ((in input) something)
+  (multiple-value-bind (obj present-p)
+      (gethash (id in) *in->obj*)
+    (if present-p
+	(input obj something)
+	(error "no object with that input!"))))
+
+
+(defmethod put ((out output) something)
+  (multiple-value-bind (in present-p)
+      (gethash (id out) *out->in*)
+    (if present-p
+	(put in something)
+	(error "output not connected to any input!"))))
+
+
+(defmethod i/o-connect ((p1 person) (p2 person))
+  (i/o-connect (audio-out p1) (audio-in p2)))
+
+
+
+(defmethod tell ((prs person) (msg string))
+  (put (audio-out prs) msg))
 
 
 (defun run (ev objs)
