@@ -5,12 +5,8 @@
   (:use :cl))
 
 
-(defparameter *out->in* (make-hash-table))
-(defparameter *in->obj* (make-hash-table))
-
-
 (deftype id-type ()
-  'keyword)
+  '(integer 0))
 
 
 (deftype time-type ()
@@ -51,7 +47,7 @@
 
 
 (defclass with-audio-output ()
-  ((audio> :reader audio-out :type audio-output)))
+  ((audio-out :reader audio-out :type audio-output)))
 
 
 (defclass with-audio-input ()
@@ -62,15 +58,27 @@
   nil)
 
 
-(defmethod initialize-instance ((prs person) &key)
-  (setf (slot-value prs 'audio-in)
-	(make-instance 'audio-input))
+
+
+(defparameter *out->in* (make-hash-table))
+(defparameter *in->obj* (make-hash-table))
+(defparameter *fresh-id* 0)
+
+
+
+
+(defun fresh-id ()
+  (incf *fresh-id*))
+
+
+(defmethod initialize-instance :after ((prs person) &key)
+  (let ((ai (make-instance 'audio-input :id (fresh-id))))
+    (setf (slot-value prs 'audio-in)
+	  ai)
+    (setf (gethash (id ai) *in->obj*)
+	  prs))
   (setf (slot-value prs 'audio-out)
-	(make-instance 'audio-output))
-  (when (and (not (slot-boundp prs 'id))
-	     (slot-boundp prs 'name))
-    (setf (slot-value prs 'id)
-	  (intern (string-upcase (name prs)) 'keyword))))
+	(make-instance 'audio-output :id (fresh-id))))
 
 
 (defclass event ()
@@ -85,6 +93,10 @@
 	in))
 
 
+(defmethod hear ((prs person) (msg string))
+  nil)
+
+
 (defmethod in ((ai audio-input) (prs person) something)
   (hear prs something))
 
@@ -93,7 +105,7 @@
   (multiple-value-bind (obj present-p)
       (gethash (id in) *in->obj*)
     (if present-p
-	(input obj something)
+	(in in obj something)
 	(error "no object with that input!"))))
 
 
@@ -127,3 +139,11 @@
 		  (merge-events evs new-evs)
 		  (merge-objects objs new-objs)
 		  (merge-connnectors conns new-conns))))))
+
+
+
+(defun ok-lets-try ()
+  (let ((alice (make-instance 'person :name "Alice" :id (fresh-id)))
+	(bob (make-instance 'person :name "Bob" :id (fresh-id))))
+    (i/o-connect alice bob)
+    (tell alice "ciao")))
