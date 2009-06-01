@@ -38,172 +38,78 @@
 (in-package :de-sim)
 
 
-(defgeneric imminent-event-time (obj)
-  (:documentation "Return time and owner of the next event to be
-  executed belonging to obj."))
+(defgeneric evolve (obj now)
+  (:documentation "obj can execute its event and evolve
+  accordingly. Returns the new version of obj."))
 
 
-(defgeneric set-role (object subject role)
-  (:documentation "Sets subject in relation with object with the
-  specified role. Example: (set-role eth-cable eth0 'device) means
-  that eth0 is the device of eth-cable"))
+(defgeneric imminent-event (obj)
+  (:documentation "Return the time of the next event of obj."))
 
 
-(defgeneric subscribed? (sub obj state)
-  (:documentation "Return t if sub is subscribed to obj's state, nil
+(defgeneric i/o-connect (output input)
+  (:documentation "Connect output to input."))
+
+
+(defgeneric i/o-connected-p (output input)
+  (:documentation "Return t if output is connected to input, nil
   otherwise"))
 
 
-(defgeneric notify-subscribed (object state)
-  (:documentation "Notify all the subscribers of object's state"))
+(defgeneric i/o-disconnect (output input)
+  (:documentation "Reverse the effect of i/o-connect."))
 
 
-(defgeneric unsubscribe (sub obj state)
-  (:documentation "After this call sub will be no more notified when
-  obj will be in the specified state."))
+(deftype id-type ()
+  '(integer 0))
 
 
-(defgeneric n-event-choosed (obj)
-  (:documentation "Notify obj that its imminent event has been choosed
-  for being executed."))
+(deftype time-type ()
+  '(or (integer 0)
+    (member :never)))
 
 
-(defgeneric n-destroy (obj)
-  (:documentation "Notify obj that it's about to be destroyed."))
-
-
-
-
-(defclass identifiable ()
+(defclass with-id ()
   ((id
-    :accessor id-of
-    :type (integer 0)
+    :initform (error ":id missing")
+    :reader id-of
+    :type id-type
     :documentation "Unique id")))
 
 
-(defclass event (identifiable)
+(defclass event (with-id)
   ((time
     :initarg :time
     :initform (error ":time missing")
     :accessor time-of
-    :type (integer 0))
+    :type time-type)
    (fn
     :initarg :fn
     :initform (error ":action missing")
     :accessor fn-of
-    :type function)
-   (args
-    :initarg :args
-    :accessor args-of
-    :type list)))
+    :type function))
 
 
-(let ((id-counter 0))
-
-  (defmethod initialize-instance :after ((ev event) &key)
-    (setf (id-of ev)
-	  (incf id-counter))))
-
-
-
-
-(defclass object (identifiable)
-  ((description
-    :initarg :description
-    :initform "simulated object"
-    :accessor description-of
-    :type string)
-   (events
+(defclass with-behaviour ()
+  ((events
     :initform (list)
     :accessor events-of
-    :type list)
-   (subscriptions
-    :initform (make-hash-table)
-    :reader subscriptions-of)
-   (notifications
-    :initform (list)
-    :accessor notifications-of
-    :type list)
-   (subscribable-states
-    :initform (list)
-    :accessor subscribable-states-of
     :type list)))
 
 
-(let ((id-counter 0))
-
-    (defmethod initialize-instance :after ((obj object) &key)
-      (setf (id-of obj)
-	    (incf id-counter))
-      (dolist (ss (subscribable-states-of obj))
-	(setf (gethash ss (subscriptions-of obj))
-	      (list)))))
-
-
-(defmethod imminent-event-time ((obj object))
-  (values (time-of (first (events-of obj)))
-	  obj))
-
-
-(defmethod n-event-choosed ((obj object))
-  (let ((ev (pop (events-of obj))))
-    (declare (type event ev))
-    (apply (fn-of ev)
-	   (args-of ev))))
-
-
-(defmethod n-destroy ((obj object))
+(defclass object (with-id)
   nil)
 
 
-(defmethod subscribed? ((sub object) (obj object) state)
-  (multiple-value-bind (subscribers state-present?)
-      (gethash state (subscriptions-of obj))
-    (if (not state-present?)
-	(error 'error-invalid)
-	(not (null (find sub subscribers :key #'car))))))
 
-
-(defmethod notify-subscribed ((obj object) state)
-  (multiple-value-bind (subscribers state-present?)
-      (gethash state (subscriptions-of obj))
-    (if (not state-present?)
-	(error 'error-invalid)
-	(dolist (sub subscribers)
-	  (funcall (cdr sub)
-		   (car sub))))))
-
-
-(defmethod subscribe ((sub object) (obj object) state notification)
-  (if (subscribed? sub obj state)
-      (error 'error-already)
-      (not (null (push `(,sub . ,notification)
-		       (gethash state
-				(subscriptions-of obj)))))))
-
-
-(defmethod unsubscribe ((sub object) (obj object) state)
-  (if (not (subscribed? sub obj state))
-      (error 'error-invalid)
-      (setf (gethash state
-		     (subscriptions-of obj))
-	    (delete sub (gethash state
-				 (subscriptions-of obj))
-		    :key #'car))))
+(defmethod imminent-event ((obj object))
+  (values :never nil))
 
 
 
-
-(let ((clock 0))
-
-  (defun gettime ()
-    clock)
+(defmethod imminent-event ((obj with-behaviour))
+  (let ((ev (first (events-of obj))))
+    (values (time-of ev) (fn-of ev))))
 
 
-  (defun run-step (obj)
-    (declare (type object obj))
-    (multiple-value-bind (time owner)
-	(imminent-event-time obj)
-      (declare (type fixnum time) (type object owner))
-      (setf clock time)
-      (n-event-choosed owner))))
+(defmethod evolve ((obj object)))
