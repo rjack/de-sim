@@ -38,6 +38,9 @@
 (in-package :de-sim)
 
 
+
+;; GENERICS
+
 (defgeneric next-to-evolve (obj &optional next time)
   (:documentation "Write me"))
 
@@ -70,6 +73,9 @@
   (:documentation "Reverse the effect of i/o-connect."))
 
 
+
+;; TYPES
+
 (deftype id-type ()
   '(integer 0))
 
@@ -79,7 +85,10 @@
     nil))
 
 
-(defclass with-id ()
+
+;; CLASSES
+
+(defclass with-id ()     ; abstract
   ((id
     :initarg :id
     :initform (error ":id missing")
@@ -119,6 +128,9 @@
     :type list)))
 
 
+
+;; PARAMETERS
+
 (defparameter *fresh-id* 0)
 
 (defparameter *out->in* (make-hash-table))
@@ -127,20 +139,19 @@
 
 
 
+;; FUNCTIONS AND METHODS
+
 (defun fresh-id ()
   (incf *fresh-id*))
-
 
 
 (defmethod components-list ((sim simulator))
   (components-of sim))
 
 
-
 (defmethod imminent-event ((obj object) &optional (max-time nil))
   (declare (ignore max-time))
   nil)
-
 
 
 (defmethod imminent-event ((ac actor) &optional (max-time nil))
@@ -152,14 +163,12 @@
 	(call-next-method))))
 
 
-
 (defmethod imminent-event ((sim simulator) &optional (max-time nil))
   (first (sort (remove-if #'null
 			  (mapcar (lambda (comp)
 				    (imminent-event comp max-time))
 				  (components-list sim)))
 	       #'< :key #'time-of)))
-
 
 
 (defmethod evolve ((obj object))
