@@ -47,7 +47,12 @@
   accordingly. Returns the new version of obj."))
 
 
-(defgeneric imminent-event (obj)
+(defgeneric components-list (sim)
+  (:documentation "Returns the list representation of their
+  components."))
+
+
+(defgeneric imminent-event (obj &optional max-time)
   (:documentation "Return the function and the time of the next event
   of obj."))
 
@@ -71,7 +76,7 @@
 
 (deftype time-type ()
   '(or (integer 0)
-    (member nil)))
+    nil))
 
 
 (defclass with-id ()
@@ -106,7 +111,7 @@
     :type list)))
 
 
-(defclass complex-actor (actor)
+(defclass simulator (actor)
   ((components
     :initform (list)
     :accessor components-of
@@ -120,26 +125,40 @@
 
 
 
+(defmethod components-list ((sim simulator))
+  (components-of sim))
+
+
+
 (defmethod no-op ((obj object))
   obj)
 
 
+
 (defmethod imminent-event ((obj object) &optional (max-time nil))
-  (values #'no-op nil))
+  (declare (ignore max-time))
+  nil)
+
 
 
 (defmethod imminent-event ((ac actor) &optional (max-time nil))
   (let ((ev (first (events-of ac))))
-    (with-accessors ((ti time-of) (fn fn-of)) ev
-      (if (or (null max-time)
-	      (< ti max-time))
-	  (values fn ti)
-	  (call-next-method)))))
+    (if (and (not (null ev))
+	     (or (null max-time)
+		 (< (time-of ev) max-time)))
+	ev
+	(call-next-method))))
 
 
-(defmethod imminent-event ((ca complex-actor) &optional (max-time nil))
-  (
+
+(defmethod imminent-event ((sim simulator) &optional (max-time nil))
+  (first (sort (remove-if #'null
+			  (mapcar (lambda (comp)
+				    (imminent-event comp max-time))
+				  (components-list sim)))
+	       #'< :key #'time-of)))
+
 
 
 (defmethod evolve ((obj object))
-  (funcall (imminent-event obj) obj))
+  (funcall (fn-of (imminent-event obj)) obj))
