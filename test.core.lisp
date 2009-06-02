@@ -33,5 +33,26 @@
 (in-package :de-sim.test)
 
 
+(define-test event-instance
+  (let ((ev (make-instance 'event :id 42 :time 123 :fn #'null)))
+    (assert-eql 42 (id-of ev))
+    (assert-eql 123 (time-of ev))
+    (assert-eql #'null (fn-of ev))))
+
+
 (define-test object-instance
-    (
+  (let ((obj (make-instance 'object :id 42)))
+    (assert-eql 42 (id-of obj))))
+
+
+(define-test actor-instance
+  (let ((act (make-instance 'actor :id 42)))
+    (assert-eql 42 (id-of act))
+    (assert-true (null (events-of act)))))
+
+
+(define-test simulator-instance
+  (let ((sim (make-instance 'simulator :id 42)))
+    (assert-eql 42 (id-of sim))
+    (assert-true (null (events-of sim)))
+    (assert-true (null (components-of sim)))))
