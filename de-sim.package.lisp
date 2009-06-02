@@ -38,5 +38,13 @@
    :error-full :error-empty
    :error-already :error-invalid
    ;; core.lisp
+   :object :id-of
+   :event :time-of :fn-of
+   :actor :events :events-of
+   :simulator :components :components-of
+   :fresh-id
+   :components-list
+   :imminent-event
+   :evolve
    ;; util.lisp
    ))
