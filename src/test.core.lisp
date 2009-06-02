@@ -33,27 +33,5 @@
 (in-package :de-sim.test)
 
 
-
-
-(defclass foo-object (object)
-  (foo-slot))
-
-
-(defclass foo-event (event)
-  (foo-slot))
-
-
-
-
-(define-test unique-ids
-  (let ((events (collect-list 1000 (lambda ()
-				     (make-instance 'foo-event :time 0
-						    :fn #'null))))
-	(objects (collect-list 1000 (lambda ()
-				      (make-instance 'foo-object)))))
-    (assert-equal events
-		  (remove-duplicates events :key #'id-of))
-    (assert-equal objects
-		  (remove-duplicates objects :key #'id-of))))
-
-(run-tests)
+(define-test object-instance
+    (

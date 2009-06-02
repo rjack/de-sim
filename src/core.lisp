@@ -35,7 +35,7 @@
 ;; TODO
 
 
-;(in-package :de-sim)
+(in-package :de-sim)
 
 
 (defgeneric next-to-evolve (obj &optional next time)
@@ -81,6 +81,7 @@
 
 (defclass with-id ()
   ((id
+    :initarg :id
     :initform (error ":id missing")
     :reader id-of
     :type id-type
@@ -118,6 +119,7 @@
     :type list)))
 
 
+(defparameter *fresh-id* 0)
 
 (defparameter *out->in* (make-hash-table))
 
@@ -125,13 +127,13 @@
 
 
 
+(defun fresh-id ()
+  (incf *fresh-id*))
+
+
+
 (defmethod components-list ((sim simulator))
   (components-of sim))
-
-
-
-(defmethod no-op ((obj object))
-  obj)
 
 
 

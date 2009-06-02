@@ -13,8 +13,4 @@
     :components ((:file "lisp-unit")
 		 (:file "de-sim.test.package")
 		 (:file "test.core"
-			:depends-on ("lisp-unit" "de-sim.test.package"))
-		 (:file "test.util"
-			:depends-on ("lisp-unit" "de-sim.test.package"))
-		 (:file "test.buffer"
 			:depends-on ("lisp-unit" "de-sim.test.package"))))

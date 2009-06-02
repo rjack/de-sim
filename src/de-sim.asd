@@ -13,8 +13,4 @@
 		 (:file "conditions"
 			:depends-on ("de-sim.package"))
 		 (:file "core"
-			:depends-on ("de-sim.package" "conditions"))
-		 (:file "util"
-			:depends-on ("de-sim.package" "conditions"))
-		 (:file "buffer"
-			:depends-on ("de-sim.package" "core" "conditions" "util"))))
+			:depends-on ("de-sim.package" "conditions"))))
