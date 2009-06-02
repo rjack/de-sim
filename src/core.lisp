@@ -35,16 +35,21 @@
 ;; TODO
 
 
-(in-package :de-sim)
+;(in-package :de-sim)
 
 
-(defgeneric evolve (obj now)
+(defgeneric next-to-evolve (obj &optional next time)
+  (:documentation "Write me"))
+
+
+(defgeneric evolve (obj)
   (:documentation "obj can execute its event and evolve
   accordingly. Returns the new version of obj."))
 
 
 (defgeneric imminent-event (obj)
-  (:documentation "Return the time of the next event of obj."))
+  (:documentation "Return the function and the time of the next event
+  of obj."))
 
 
 (defgeneric i/o-connect (output input)
@@ -66,7 +71,7 @@
 
 (deftype time-type ()
   '(or (integer 0)
-    (member :never)))
+    (member nil)))
 
 
 (defclass with-id ()
@@ -87,29 +92,54 @@
     :initarg :fn
     :initform (error ":action missing")
     :accessor fn-of
-    :type function))
-
-
-(defclass with-behaviour ()
-  ((events
-    :initform (list)
-    :accessor events-of
-    :type list)))
+    :type function)))
 
 
 (defclass object (with-id)
   nil)
 
 
-
-(defmethod imminent-event ((obj object))
-  (values :never nil))
-
-
-
-(defmethod imminent-event ((obj with-behaviour))
-  (let ((ev (first (events-of obj))))
-    (values (time-of ev) (fn-of ev))))
+(defclass actor (object)
+  ((events
+    :initform (list)
+    :accessor events-of
+    :type list)))
 
 
-(defmethod evolve ((obj object)))
+(defclass complex-actor (actor)
+  ((components
+    :initform (list)
+    :accessor components-of
+    :type list)))
+
+
+
+(defparameter *out->in* (make-hash-table))
+
+(defparameter *in->obj* (make-hash-table))
+
+
+
+(defmethod no-op ((obj object))
+  obj)
+
+
+(defmethod imminent-event ((obj object) &optional (max-time nil))
+  (values #'no-op nil))
+
+
+(defmethod imminent-event ((ac actor) &optional (max-time nil))
+  (let ((ev (first (events-of ac))))
+    (with-accessors ((ti time-of) (fn fn-of)) ev
+      (if (or (null max-time)
+	      (< ti max-time))
+	  (values fn ti)
+	  (call-next-method)))))
+
+
+(defmethod imminent-event ((ca complex-actor) &optional (max-time nil))
+  (
+
+
+(defmethod evolve ((obj object))
+  (funcall (imminent-event obj) obj))
