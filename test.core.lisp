@@ -37,6 +37,10 @@
   (make-instance 'actor :id (fresh-id)))
 
 
+(defun fresh-object ()
+  (make-instance 'object :id (fresh-id)))
+
+
 (define-test event-instance
   (let ((ev (make-instance 'event :id 42 :time 123 :fn #'null)))
     (assert-eql 42 (id-of ev))
@@ -86,3 +90,7 @@
       (assert-eql small-at (time-of (first (events-of act))))
       (assert-eql medium-at (time-of (second (events-of act))))
       (assert-eql big-at (time-of (third (events-of act)))))))
+
+
+(define-test imminent-event-object
+  (assert-true (null (imminent-event (fresh-object)))))
