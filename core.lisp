@@ -60,6 +60,10 @@
   of obj."))
 
 
+(defgeneric schedule (actor function &key at relative-p)
+  (:documentation "TODO"))
+
+
 (defgeneric i/o-connect (output input)
   (:documentation "Connect output to input."))
 
@@ -169,6 +173,24 @@
 				    (imminent-event comp max-time))
 				  (components-list sim)))
 	       #'< :key #'time-of)))
+
+
+(defmethod schedule ((act actor) (fn function)
+		     &key (at 0) (relative-p t) (id 0 id-p))
+  (let ((abs-time (+ at (if relative-p
+			    (gettime)
+			    0))))
+    (if (< abs-time (gettime))
+	(error 'error-invalid)
+	(setf (events-of act)
+	      (sort (cons (make-instance 'event
+					 :id (if id-p
+						 id
+						 (fresh-id))
+					 :time abs-time :fn fn)
+			  (events-of act))
+		    #'< :key #'time-of))))
+  act)
 
 
 (defmethod evolve ((obj object))
