@@ -176,12 +176,14 @@
 
 (defmethod i/o-connect ((out out-port) (in in-port))
   (setf (gethash (id-of out) *out->in*)
-	in))
+	in)
+  in)
 
 
 (defmethod i/o-connect ((in in-port) (act actor))
   (setf (gethash (id-of in) *in->act*)
-	act))
+	act)
+  act)
 
 
 (defmethod components-list ((sim simulator))
