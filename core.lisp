@@ -137,6 +137,8 @@
 
 (defparameter *fresh-id* 0)
 
+(defparameter *clock* 0)
+
 (defparameter *out->in* (make-hash-table))
 
 (defparameter *in->obj* (make-hash-table))
@@ -144,6 +146,10 @@
 
 
 ;; FUNCTIONS AND METHODS
+
+(defun gettime ()
+  *clock*)
+
 
 (defun fresh-id ()
   (incf *fresh-id*))
