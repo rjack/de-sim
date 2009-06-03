@@ -107,3 +107,15 @@
       (assert-true (null (imminent-event act 5)))
       (let ((act (schedule act #'null :at 5 :id 1)))
 	(assert-eql 1 (id-of (imminent-event act 5)))))))
+
+
+(define-test imminent-event-simulator
+  (let ((sim (schedule (make-instance 'simulator :id (fresh-id)
+				      :components (list (schedule (fresh-actor) #'null :at 10 :id 4)
+							(fresh-object)
+							(schedule (make-instance 'simulator :id (fresh-id)
+										 :components (list (fresh-object)
+												   (schedule (fresh-actor) #'null :at 0 :id 1)))
+								  #'null :at 5 :id 2)))
+		       #'null :at 4 :id 3)))
+    (assert-eql 1 (id-of (imminent-event sim)))))
