@@ -119,3 +119,10 @@
 								  #'null :at 5 :id 2)))
 		       #'null :at 4 :id 3)))
     (assert-eql 1 (id-of (imminent-event sim)))))
+
+
+(define-test i/o-connect-out-in
+  (let ((out (make-instance 'out-port :id (fresh-id)))
+	(in (make-instance 'in-port :id (fresh-id))))
+    (i/o-connect out in)
+    (assert-true (i/o-connected-p out in))))
