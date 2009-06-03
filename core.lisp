@@ -71,7 +71,7 @@
 
 (defgeneric i/o-connected-p (src dst)
   (:documentation "Return t if src is connected to dst, nil
-  otherwise"))
+  otherwise."))
 
 
 (defgeneric i/o-disconnect (src dst)
