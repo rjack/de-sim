@@ -197,7 +197,7 @@
   (let ((ev (first (events-of ac))))
     (if (and (not (null ev))
 	     (or (null max-time)
-		 (< (time-of ev) max-time)))
+		 (<= (time-of ev) max-time)))
 	ev
 	(call-next-method))))
 
