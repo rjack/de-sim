@@ -27,7 +27,8 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-(declaim (optimize debug safety (speed 0)))
+(declaim (optimize debug safety (speed 0))
+	 (sb-ext:muffle-conditions sb-ext:compiler-note))
 
 
 ;; OVERVIEW
@@ -64,16 +65,16 @@
   (:documentation "TODO"))
 
 
-(defgeneric i/o-connect (output input)
-  (:documentation "Connect output to input."))
+(defgeneric i/o-connect (src dest)
+  (:documentation "Connect src to dest."))
 
 
-(defgeneric i/o-connected-p (output input)
-  (:documentation "Return t if output is connected to input, nil
+(defgeneric i/o-connected-p (src dst)
+  (:documentation "Return t if src is connected to dst, nil
   otherwise"))
 
 
-(defgeneric i/o-disconnect (output input)
+(defgeneric i/o-disconnect (src dst)
   (:documentation "Reverse the effect of i/o-connect."))
 
 
@@ -85,8 +86,7 @@
 
 
 (deftype time-type ()
-  '(or (integer 0)
-    nil))
+  '(integer 0))
 
 
 
@@ -118,10 +118,28 @@
   nil)
 
 
+(defclass in-port (with-id)
+  nil)
+
+
+(defclass out-port (with-id)
+  nil)
+
+
 (defclass actor (object)
-  ((events
+  ((in-ports
+    :initarg :in-ports
     :initform (list)
+    :accessor in-ports-of
+    :type list)
+   (out-ports
+    :initarg :out-ports
+    :initform (list)
+    :accessor out-ports-of
+    :type list)
+   (events
     :accessor events-of
+    :initform (list)
     :type list)))
 
 
@@ -142,7 +160,7 @@
 
 (defparameter *out->in* (make-hash-table))
 
-(defparameter *in->obj* (make-hash-table))
+(defparameter *in->act* (make-hash-table))
 
 
 
@@ -154,6 +172,16 @@
 
 (defun fresh-id ()
   (incf *fresh-id*))
+
+
+(defmethod i/o-connect ((out out-port) (in in-port))
+  (setf (gethash (id-of out) *out->in*)
+	in))
+
+
+(defmethod i/o-connect ((in in-port) (act actor))
+  (setf (gethash (id-of in) *in->act*)
+	act))
 
 
 (defmethod components-list ((sim simulator))
@@ -184,6 +212,9 @@
 
 (defmethod schedule ((act actor) (fn function)
 		     &key (at 0) (relative-p t) (id 0 id-p))
+  (declare (time-type at)
+	   (id-type id))
+
   (let ((abs-time (+ at (if relative-p
 			    (gettime)
 			    0))))
