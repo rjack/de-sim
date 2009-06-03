@@ -126,3 +126,10 @@
 	(in (make-instance 'in-port :id (fresh-id))))
     (i/o-connect out in)
     (assert-true (i/o-connected-p out in))))
+
+
+(define-test i/o-connect-in-act
+  (let ((in (make-instance 'in-port :id (fresh-id)))
+	(act (make-instance 'actor :id (fresh-id))))
+    (i/o-connect in act)
+    (assert-true (i/o-connected-p in act))))
