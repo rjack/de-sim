@@ -46,5 +46,7 @@
    :components-list
    :imminent-event
    :evolve
+   :gettime
+   :schedule
    ;; util.lisp
    ))
