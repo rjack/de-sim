@@ -39,14 +39,17 @@
    :error-already :error-invalid
    ;; core.lisp
    :object :id-of
+   :in-port
+   :out-port
    :event :time-of :fn-of
-   :actor :events :events-of
+   :actor :in-ports-of :out-ports-of :events :events-of
    :simulator :components :components-of
    :fresh-id
    :components-list
    :imminent-event
    :evolve
    :gettime
+   :i/o-connect :i/o-connected-p :i/o-disconnect
    :schedule
    ;; util.lisp
    ))
