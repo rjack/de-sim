@@ -33,6 +33,10 @@
 (in-package :de-sim.test)
 
 
+(defun fresh-actor ()
+  (make-instance 'actor :id (fresh-id)))
+
+
 (define-test event-instance
   (let ((ev (make-instance 'event :id 42 :time 123 :fn #'null)))
     (assert-eql 42 (id-of ev))
@@ -56,3 +60,27 @@
     (assert-eql 42 (id-of sim))
     (assert-true (null (events-of sim)))
     (assert-true (null (components-of sim)))))
+
+
+(define-test schedule-object
+  (let ((obj (make-instance 'object :id 42)))
+    ;; there is no schedule method specialized on object
+    (assert-error 'simple-error (schedule obj #'null))))
+
+
+(define-test schedule-actor
+  (let ((fn #'null)
+	(small-at 0)
+	(medium-at 5)
+	(big-at 10)
+	(bad-at -1))
+    ;; no negative time
+    (assert-error 'error (schedule (fresh-actor) fn :at bad-at))
+
+    (let ((act (schedule (schedule (schedule (fresh-actor) fn :at
+					     big-at)
+				   fn :at medium-at)
+			 fn :at small-at)))
+      (assert-eql small-at (time-of (first (events-of act))))
+      (assert-eql medium-at (time-of (second (events-of act))))
+      (assert-eql big-at (time-of (third (events-of act)))))))
