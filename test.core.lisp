@@ -94,3 +94,16 @@
 
 (define-test imminent-event-object
   (assert-true (null (imminent-event (fresh-object)))))
+
+
+(define-test imminent-event-actor
+  (let ((act (fresh-actor)))
+    ;; should have no events
+    (assert-true (null (imminent-event act)))
+    (let ((act (schedule act #'null :at 10 :id 0)))
+      ;; should return the event
+      (assert-eql 0 (id-of (imminent-event act)))
+      ;; max time 5, event at 10, should return nil
+      (assert-true (null (imminent-event act 5)))
+      (let ((act (schedule act #'null :at 5 :id 1)))
+	(assert-eql 1 (id-of (imminent-event act 5)))))))
