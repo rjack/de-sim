@@ -59,6 +59,8 @@
   (let ((sim (make-instance 'simulator :id 42)))
     (assert-eql 42 (id-of sim))
     (assert-true (null (events-of sim)))
+    (assert-true (null (in-ports-of sim)))
+    (assert-true (null (out-ports-of sim)))
     (assert-true (null (components-of sim)))))
 
 
