@@ -186,6 +186,20 @@
   act)
 
 
+(defmethod i/o-connected-p ((out out-port) (in in-port))
+  (multiple-value-bind (value present-p)
+      (gethash (id-of out) *out->in*)
+    (and present-p
+	 (eq value in))))
+
+
+(defmethod i/o-connected-p ((in in-port) (act actor))
+  (multiple-value-bind (value present-p)
+      (gethash (id-of in) *in->act*)
+    (and present-p
+	 (eq value act))))
+
+
 (defmethod components-list ((sim simulator))
   (components-of sim))
 
