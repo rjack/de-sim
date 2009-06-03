@@ -42,7 +42,7 @@
 ;; GENERICS
 
 (defgeneric next-to-evolve (obj &optional next time)
-  (:documentation "Write me"))
+  (:documentation "TODO"))
 
 
 (defgeneric evolve (obj)
