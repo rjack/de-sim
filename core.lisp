@@ -127,6 +127,7 @@
 
 (defclass simulator (actor)
   ((components
+    :initarg :components
     :initform (list)
     :accessor components-of
     :type list)))
