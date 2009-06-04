@@ -240,3 +240,13 @@
 
 (defmethod evolve ((obj object))
   obj)
+
+
+(defmethod evolve ((act actor))
+  (let ((ev (imminent-event act)))
+    (if ev
+	(apply (fn-of ev)
+	       (append (list act)
+		       (if (slot-boundp ev 'args)
+			   (args-of ev))))
+	(call-next-method))))
