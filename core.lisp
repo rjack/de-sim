@@ -61,7 +61,7 @@
   of obj."))
 
 
-(defgeneric schedule (actor function &key at relative-p)
+(defgeneric schedule (delay function actor &rest args)
   (:documentation "TODO"))
 
 
@@ -111,7 +111,13 @@
     :initarg :fn
     :initform (error ":action missing")
     :accessor fn-of
-    :type function)))
+    :type function)
+   (args
+    :initarg :args
+    ;; unbound if unused
+    :accessor args-of
+    :type list)))
+
 
 
 (defclass object (with-id)
@@ -210,25 +216,26 @@
 	       #'< :key #'time-of)))
 
 
-(defmethod schedule ((act actor) (fn function)
-		     &key (at 0) (relative-p t) (id 0 id-p))
-  (declare (time-type at)
-	   (id-type id))
-
-  (let ((abs-time (+ at (if relative-p
-			    (gettime)
-			    0))))
-    (if (< abs-time (gettime))
-	(error 'error-invalid)
+(defmethod schedule (delay (fn function) (act actor)
+		     &rest args)
+  (if (< delay 0)
+      (error 'error-invalid)
+      (let ((ev (apply 'make-instance
+		       'event
+		       ;; building arguments for make-instance:
+		       ;; if args is nil, leave slot unbound
+		       (append (list :id (fresh-id)
+				     :time (+ delay
+					      (gettime))
+				     :fn fn)
+			       (if (null args)
+				   nil
+				   (list :args args))))))
 	(setf (events-of act)
-	      (sort (cons (make-instance 'event
-					 :id (if id-p
-						 id
-						 (fresh-id))
-					 :time abs-time :fn fn)
+	      (sort (cons ev
 			  (events-of act))
-		    #'< :key #'time-of))))
-  act)
+		    #'< :key #'time-of))
+	(values act ev))))
 
 
 (defmethod evolve ((obj object))
