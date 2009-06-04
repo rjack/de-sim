@@ -122,14 +122,11 @@
 
 
 (define-test i/o-connect-out-in
-  (let ((out (make-instance 'out-port :id (fresh-id)))
-	(in (make-instance 'in-port :id (fresh-id))))
+  (let ((out (make-instance 'out-port :id (fresh-id)
+			    :owner (fresh-actor)))
+	(in (make-instance 'in-port :id (fresh-id)
+			   :owner (fresh-actor))))
     (i/o-connect out in)
-    (assert-true (i/o-connected-p out in))))
-
-
-(define-test i/o-connect-in-act
-  (let ((in (make-instance 'in-port :id (fresh-id)))
-	(act (make-instance 'actor :id (fresh-id))))
-    (i/o-connect in act)
-    (assert-true (i/o-connected-p in act))))
+    (multiple-value-bind (val val-p) (i/o-connected out)
+      (assert-true val-p)
+      (assert-eq in val))))
