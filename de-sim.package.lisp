@@ -39,6 +39,7 @@
    :error-already :error-invalid
    ;; core.lisp
    :object :id-of
+   :port :owner-of
    :in-port
    :out-port
    :event :time-of :fn-of
@@ -49,7 +50,7 @@
    :imminent-event
    :evolve
    :gettime
-   :i/o-connect :i/o-connected-p :i/o-disconnect
+   :i/o-connect :i/o-connected :i/o-disconnect
    :schedule
    ;; util.lisp
    ))
