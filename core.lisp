@@ -232,4 +232,4 @@
 
 
 (defmethod evolve ((obj object))
-  (funcall (fn-of (imminent-event obj)) obj))
+  obj)
