@@ -69,13 +69,13 @@
   (:documentation "Connect src to dest."))
 
 
-(defgeneric i/o-connected-p (src dst)
-  (:documentation "Return t if src is connected to dst, nil
-  otherwise."))
+(defgeneric i/o-connected (src)
+  (:documentation "Return values: connected object and connected-p
+  boolean."))
 
 
-(defgeneric i/o-disconnect (src dst)
-  (:documentation "Reverse the effect of i/o-connect."))
+(defgeneric i/o-disconnect (src)
+  (:documentation "Disconnect src."))
 
 
 
@@ -118,14 +118,6 @@
   nil)
 
 
-(defclass in-port (with-id)
-  nil)
-
-
-(defclass out-port (with-id)
-  nil)
-
-
 (defclass actor (object)
   ((in-ports
     :initarg :in-ports
@@ -151,6 +143,22 @@
     :type list)))
 
 
+(defclass port (with-id)
+  ((owner
+    :initarg :owner
+    :initform (error ":owner missing")
+    :accessor owner-of
+    :type actor)))
+
+
+(defclass in-port (port)
+  nil)
+
+
+(defclass out-port (port)
+  nil)
+
+
 
 ;; PARAMETERS
 
@@ -159,8 +167,6 @@
 (defparameter *clock* 0)
 
 (defparameter *out->in* (make-hash-table))
-
-(defparameter *in->act* (make-hash-table))
 
 
 
@@ -180,24 +186,12 @@
   in)
 
 
-(defmethod i/o-connect ((in in-port) (act actor))
-  (setf (gethash (id-of in) *in->act*)
-	act)
-  act)
+(defmethod i/o-connected ((out out-port))
+  (gethash (id-of out) *out->in*))
 
 
-(defmethod i/o-connected-p ((out out-port) (in in-port))
-  (multiple-value-bind (value present-p)
-      (gethash (id-of out) *out->in*)
-    (and present-p
-	 (eq value in))))
-
-
-(defmethod i/o-connected-p ((in in-port) (act actor))
-  (multiple-value-bind (value present-p)
-      (gethash (id-of in) *in->act*)
-    (and present-p
-	 (eq value act))))
+(defmethod i/o-disconnect ((out out-port))
+  (remhash (id-of out) *out->in*))
 
 
 (defmethod components-list ((sim simulator))
