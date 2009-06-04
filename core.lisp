@@ -250,3 +250,16 @@
 		       (if (slot-boundp ev 'args)
 			   (args-of ev))))
 	(call-next-method))))
+
+
+(defmethod evolve ((sim simulator))
+  (evolve (cdr (the (cons event actor)
+		 (first
+		  (sort
+		   (remove-if #'null
+			      (mapcar (lambda (comp)
+					(cons (imminent-event comp)
+					      comp))
+				      (components-list sim)))
+		   #'< :key (lambda (cell)
+			      (time-of (car cell)))))))))
