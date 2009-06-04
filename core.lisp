@@ -119,17 +119,7 @@
 
 
 (defclass actor (object)
-  ((in-ports
-    :initarg :in-ports
-    :initform (list)
-    :accessor in-ports-of
-    :type list)
-   (out-ports
-    :initarg :out-ports
-    :initform (list)
-    :accessor out-ports-of
-    :type list)
-   (events
+  ((events
     :accessor events-of
     :initform (list)
     :type list)))
