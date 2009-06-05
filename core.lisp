@@ -56,6 +56,9 @@
   (:documentation "TODO"))
 
 
+(defgeneric add-event (actor event)
+  (:documentation "TODO"))
+
 (defgeneric path (object)
   (:documentation "TODO"))
 
@@ -244,8 +247,7 @@
 	 (owner-path-of ev)))
 
 
-;; TODO fixme
-(defmethod schedule ((events list) delay (fn function) (act actor)
+(defmethod schedule ((all-events list) delay (fn function) (act actor)
 		     &rest args)
   (if (< delay 0)
       (error 'error-invalid)
@@ -261,9 +263,14 @@
 			       (if (null args)
 				   nil
 				   (list :args args))))))
-	(values (sort (cons ev events)
-		      #'< :key #'time-of)
-		act ev))))
+	(values (the list (sort-events (cons ev all-events)))
+		(the actor (add-event act ev))
+		(the event ev)))))
+
+
+(defmethod add-event ((act actor) (ev event))
+  (setf (events-of act)
+	(sort-events (cons ev (events-of act)))))
 
 
 (defmethod evolve ((act actor) (evs list))
