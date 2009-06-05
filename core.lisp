@@ -42,26 +42,29 @@
 
 ;; GENERICS
 
-(defgeneric next-to-evolve (obj &optional next time)
-  (:documentation "TODO"))
-
-
-(defgeneric evolve (obj)
+(defgeneric evolve (object events)
   (:documentation "obj can execute its event and evolve
   accordingly. Returns the new version of obj."))
 
 
-(defgeneric components-list (sim)
+(defgeneric components-list (simulator)
   (:documentation "Returns the list representation of their
   components."))
 
 
-(defgeneric imminent-event (obj &optional max-time)
-  (:documentation "Return the function and the time of the next event
-  of obj."))
+(defgeneric components-path (simulator)
+  (:documentation "TODO"))
 
 
-(defgeneric schedule (delay function actor &rest args)
+(defgeneric path (object)
+  (:documentation "TODO"))
+
+
+(defgeneric belongs (object event)
+  (:documentation "TODO"))
+
+
+(defgeneric schedule (events delay function actor &rest args)
   (:documentation "TODO"))
 
 
@@ -102,7 +105,12 @@
 
 
 (defclass event (with-id)
-  ((time
+  ((owner-path
+    :initarg :owner-path
+    :initform (error ":owner-path missing")
+    :accessor owner-path-of
+    :type list)
+   (time
     :initarg :time
     :initform (error ":time missing")
     :accessor time-of
@@ -119,9 +127,23 @@
     :type list)))
 
 
-
 (defclass object (with-id)
-  nil)
+  ((parents-path
+    :initarg :parents-path
+    :initform (error ":parents-path missing")
+    :accessor parents-path-of
+    :type list
+    :documentation "A list of id telling where the object is in the object tree.
+    Example: given the tree
+      sim-0
+        sim-1
+          act-2
+          obj-3
+        obj-4
+        sim-5
+          obj-6
+    the path of obj-6 is (0 5)
+    the paths of act-1 and obj-3 are the same (0 1)")))
 
 
 (defclass actor (object)
@@ -132,11 +154,8 @@
 
 
 (defclass simulator (actor)
-  ((components
-    :initarg :components
-    :initform (list)
-    :accessor components-of
-    :type list)))
+  ;; components slots in subclasses
+  nil)
 
 
 (defclass port (with-id)
@@ -158,7 +177,8 @@
 
 ;; PARAMETERS
 
-(defparameter *fresh-id* 0)
+(defparameter *fresh-object-id* 0)
+(defparameter *fresh-event-id* 0)
 
 (defparameter *clock* 0)
 
@@ -172,8 +192,17 @@
   *clock*)
 
 
-(defun fresh-id ()
-  (incf *fresh-id*))
+(defun path-starts-with (seq test)
+  (equal (subseq seq 0 (length test))
+	 test))
+
+
+(defun fresh-object-id ()
+  (incf *fresh-object-id*))
+
+
+(defun fresh-event-id ()
+  (incf *fresh-event-id*))
 
 
 (defmethod i/o-connect ((out out-port) (in in-port))
@@ -191,32 +220,26 @@
 
 
 (defmethod components-list ((sim simulator))
-  (components-of sim))
+  (error "override me!"))
 
 
-(defmethod imminent-event ((obj object) &optional (max-time nil))
-  (declare (ignore max-time))
-  nil)
+(defmethod components-path ((sim simulator))
+  (append (parents-path-of sim)
+	  (list (id-of sim))))
 
 
-(defmethod imminent-event ((ac actor) &optional (max-time nil))
-  (let ((ev (first (events-of ac))))
-    (if (and (not (null ev))
-	     (or (null max-time)
-		 (<= (time-of ev) max-time)))
-	ev
-	(call-next-method))))
+(defmethod path ((obj object))
+  (append (parents-path-of obj)
+	  (list (id-of obj))))
 
 
-(defmethod imminent-event ((sim simulator) &optional (max-time nil))
-  (first (sort (remove-if #'null
-			  (mapcar (lambda (comp)
-				    (imminent-event comp max-time))
-				  (components-list sim)))
-	       #'< :key #'time-of)))
+(defmethod belongs ((obj object) (ev event))
+  (equal (path obj)
+	 (owner-path-of ev)))
 
 
-(defmethod schedule (delay (fn function) (act actor)
+;; TODO fixme
+(defmethod schedule ((events list) delay (fn function) (act actor)
 		     &rest args)
   (if (< delay 0)
       (error 'error-invalid)
@@ -224,42 +247,38 @@
 		       'event
 		       ;; building arguments for make-instance:
 		       ;; if args is nil, leave slot unbound
-		       (append (list :id (fresh-id)
+		       (append (list :id (fresh-event-id)
 				     :time (+ delay
 					      (gettime))
-				     :fn fn)
+				     :fn fn
+				     :owner-path (path act))
 			       (if (null args)
 				   nil
 				   (list :args args))))))
-	(setf (events-of act)
-	      (sort (cons ev
-			  (events-of act))
-		    #'< :key #'time-of))
-	(values act ev))))
+	(values (sort (cons ev events)
+		      #'< :key #'time-of)
+		act ev))))
 
 
-(defmethod evolve ((obj object))
-  obj)
-
-
-(defmethod evolve ((act actor))
-  (let ((ev (imminent-event act)))
-    (if ev
+(defmethod evolve ((act actor) (evs list))
+  (let ((ev (first evs)))
+    (if (belongs act ev)
 	(apply (fn-of ev)
 	       (append (list act)
 		       (if (slot-boundp ev 'args)
 			   (args-of ev))))
-	(call-next-method))))
+	(error 'error-invalid))))
 
 
-(defmethod evolve ((sim simulator))
-  (evolve (cdr (the (cons event actor)
-		 (first
-		  (sort
-		   (remove-if #'null
-			      (mapcar (lambda (comp)
-					(cons (imminent-event comp)
-					      comp))
-				      (components-list sim)))
-		   #'< :key (lambda (cell)
-			      (time-of (car cell)))))))))
+(defmethod evolve ((sim simulator) (evs list))
+  (let ((next-ev (first evs)))
+    (if (belongs sim next-ev)
+	(call-next-method)
+	(let ((evolving (find-if (lambda (component)
+				   (path-starts-with (owner-path-of next-ev)
+						     (path component)))
+				 (components-list sim))))
+	  (if evolving
+	      (evolve evolving evs)
+	      ;; next-ev's owner not found, discard it and keep going
+	      (evolve sim (rest evs)))))))
