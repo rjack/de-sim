@@ -205,6 +205,10 @@
   (incf *fresh-event-id*))
 
 
+(defun sort-events (evs)
+  (sort evs #'< :key #'time-of))
+
+
 (defmethod i/o-connect ((out out-port) (in in-port))
   (setf (gethash (id-of out) *out->in*)
 	in)
