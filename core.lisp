@@ -52,7 +52,7 @@
   components."))
 
 
-(defgeneric components-path (simulator)
+(defgeneric assign-path (object simulator)
   (:documentation "TODO"))
 
 
@@ -223,9 +223,11 @@
   (error "override me!"))
 
 
-(defmethod components-path ((sim simulator))
-  (append (parents-path-of sim)
-	  (list (id-of sim))))
+(defmethod assign-path ((obj object) (sim simulator))
+  (setf (parents-path-of obj)
+	(append (parents-path-of sim)
+		(list (id-of sim))))
+  obj)
 
 
 (defmethod path ((obj object))
