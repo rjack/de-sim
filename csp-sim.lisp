@@ -155,3 +155,12 @@
     (setf voi> (make-instance 'voice-out-port :owner c))
     (setf vib< (make-instance 'vibration-in-port :owner c))
     (setf vib> (make-instance 'vibration-out-port :owner c))))
+
+
+(defmethod initialize-instance ((w wire) &key)
+  (with-accessors ((a< a-vibration-in-of) (a> a-vibration-out-of)
+		   (b< b-vibration-in-of) (b> b-vibration-out-of)) w
+    (setf a< (make-instance 'vibration-in-port :owner w))
+    (setf a> (make-instance 'vibration-out-port :owner w))
+    (setf b< (make-instance 'vibration-in-port :owner w))
+    (setf b> (make-instance 'vibration-out-port :owner w))))
