@@ -144,3 +144,14 @@
     :initform (error ":wire missing")
     :reader wire-of
     :type wire)))
+
+
+;; INITIALIZE INSTANCE
+
+(defmethod initialize-instance ((c can) &key)
+  (with-accessors ((voi< voice-in-of) (voi> voice-out-of)
+		   (vib< vibration-in-of) (vib> vibration-out-of)) c
+    (setf voi< (make-instance 'voice-in-port :owner c))
+    (setf voi> (make-instance 'voice-out-port :owner c))
+    (setf vib< (make-instance 'vibration-in-port :owner c))
+    (setf vib> (make-instance 'vibration-out-port :owner c))))
