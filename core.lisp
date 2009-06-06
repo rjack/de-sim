@@ -210,8 +210,6 @@
   (setf (slot-value pt 'id)
 	(incf *fresh-port-id*)))
 
-(defun gettime ()
-  *clock*)
 
 (defmethod initialize-instance :after ((ev event) &key)
   (setf (slot-value ev 'id)
@@ -273,25 +271,22 @@
 	 (owner-path-of ev)))
 
 
-(defmethod schedule ((all-events list) delay (fn function) (act actor)
+(defmethod schedule ((all-events list) at (fn function) (act actor)
 		     &rest args)
-  (if (< delay 0)
-      (error 'error-invalid)
-      (let ((ev (apply 'make-instance
-		       'event
-		       ;; building arguments for make-instance:
-		       ;; if args is nil, leave slot unbound
-		       (append (list :id (fresh-event-id)
-				     :time (+ delay
-					      (gettime))
-				     :fn fn
-				     :owner-path (path act))
-			       (if (null args)
-				   nil
-				   (list :args args))))))
-	(values (the list (sort-events (cons ev all-events)))
-		(the actor (add-event act ev))
-		(the event ev)))))
+  (declare (time-type at))
+  (let ((ev (apply 'make-instance
+		   'event
+		   ;; building arguments for make-instance:
+		   ;; if args is nil, leave slot unbound
+		   (append (list :time at
+				 :fn fn
+				 :owner-path (path act))
+			   (if (null args)
+			       nil
+			       (list :args args))))))
+    (values (the list (sort-events (cons ev all-events)))
+	    (the actor (add-event act ev))
+	    (the event ev))))
 
 
 (defmethod add-event ((act actor) (ev event))
@@ -303,7 +298,7 @@
   (let ((ev (first evs)))
     (if (belongs act ev)
 	(apply (fn-of ev)
-	       (append (list act)
+	       (append (list act (time-of ev))
 		       (if (slot-boundp ev 'args)
 			   (args-of ev))))
 	(error 'error-invalid))))
