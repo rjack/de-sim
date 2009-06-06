@@ -111,7 +111,26 @@
 
 
 (defclass wire (actor)
-  nil)
+  ((a-vibration-in
+    :initarg :a-vibration-in
+    :initform (error ":a-vibration-in missing")
+    :accessor a-vibration-in-of
+    :type vibration-in-port)
+   (a-vibration-out
+    :initarg :a-vibration-out
+    :initform (error ":a-vibration-out missing")
+    :accessor a-vibration-out-of
+    :type vibration-out-port)
+   (b-vibration-in
+    :initarg :b-vibration-in
+    :initform (error ":b-vibration-in missing")
+    :accessor b-vibration-in-of
+    :type vibration-in-port)
+   (b-vibration-out
+    :initarg :b-vibration-out
+    :initform (error ":b-vibration-out missing")
+    :accessor b-vibration-out-of
+    :type vibration-out-port)))
 
 
 (defclass csp-scenario (simulator)
