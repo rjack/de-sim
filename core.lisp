@@ -177,6 +177,22 @@
   nil)
 
 
+(defclass stream-in-port (in-port)
+  ((stream
+    :initarg :input-stream
+    :initform *query-io*
+    :reader stream-of
+    :type stream)))
+
+
+(defclass stream-out-port (out-port)
+  ((stream
+    :initarg :output-stream
+    :initform *query-io*
+    :reader stream-of
+    :type stream)))
+
+
 
 ;; PARAMETERS
 
