@@ -38,19 +38,23 @@
    :error-full :error-empty
    :error-already :error-invalid
    ;; core.lisp
-   :object :id-of
+   :id-type :time-type
+   :with-id :id-of
+   :event :owner-path-of :time-of :fn-of :args-of
+   :object :parents-path-of
+   :actor :events-of
+   :simulator
    :port :owner-of
-   :in-port
-   :out-port
-   :event :time-of :fn-of
-   :actor :in-ports-of :out-ports-of :events :events-of
-   :simulator :components :components-of
-   :fresh-id
-   :components-list
-   :imminent-event
-   :evolve
-   :gettime
+   :in-port :out-port
+   :stream-in-port :stream-out-port :stream-of
+   :path-starts-with
+   :fresh-object-id :fresh-event-if :fresh-port-id
+   :sort-events
    :i/o-connect :i/o-connected :i/o-disconnect
+   :component-list
+   :assign-path
+   :path
+   :belongs
    :schedule
-   ;; util.lisp
-   ))
+   :add-event
+   :evolve))
