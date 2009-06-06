@@ -59,6 +59,7 @@
 (defgeneric add-event (actor event)
   (:documentation "TODO"))
 
+
 (defgeneric path (object)
   (:documentation "TODO"))
 
