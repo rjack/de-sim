@@ -26,16 +26,81 @@
 ;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 (declaim (optimize debug safety (speed 0)))
 
 
 ;; OVERVIEW
+;; CSP-SIM simulates a simple scenario in which two cans are connected
+;; by a string (let's call it wire from now on).  Talk into a can and
+;; the wire will transmit the sound to the other can.
+;;
+;; Components:
+;;
+;;     voice-in-port  --> +-----+ --> vibration-out-port
+;;                        | CAN |
+;;     voice-out-port <-- +-----+ <-- vibration-in-port
+;;
+;;
+;;     vibration-in-port  --> +------+ --> vibration-out-port
+;;                            | WIRE |
+;;     vibration-out-port <-- +------+ <-- vibration-in-port
 
-;; TODO
 
 (defpackage :org.altervista.rjack.csp-sim
   (:nicknames :csp-sim)
   (:use :cl :de-sim))
 
 (in-package :csp-sim)
+
+
+(defclass vibration-in-port (in-port)
+  nil)
+
+
+(defclass vibration-out-port (out-port)
+  nil)
+
+
+(defclass voice-in-port (in-port)
+  nil)
+
+
+(defclass voice-out-port (out-port)
+  nil)
+
+
+(defclass voice (object)
+  ((message
+    :initarg :message
+    :initform (error ":message missing")
+    :reader message-of
+    :type string)))
+
+
+(defclass vibration (object)
+  ((message
+    :initarg :message
+    :initform (error ":message missing")
+    :reader message-of
+    :type string)))
+
+
+(defclass can (actor)
+  nil)
+
+
+(defclass wire (actor)
+  nil)
+
+
+(defclass csp-scenario (simulator)
+  ((cans
+    :initarg :cans
+    :initform (error ":cans missing")
+    :reader cans-of
+    :type (cons can can))
+   (wire
+    :initarg :wire
+    :initform (error ":wire missing")
+    :reader wire-of
+    :type wire)))
