@@ -88,7 +88,26 @@
 
 
 (defclass can (actor)
-  nil)
+  ((voice-in
+    :initarg :voice-in
+    :initform (error ":voice-in missing")
+    :accessor voice-in-of
+    :type voice-in-port)
+   (voice-out
+    :initarg :voice-out
+    :initform (error ":voice-out missing")
+    :accessor voice-out-of
+    :type voice-out-port)
+   (vibration-in
+    :initarg :vibration-in
+    :initform (error ":vibration-in missing")
+    :accessor vibration-in-of
+    :type vibration-in-port)
+   (vibration-out
+    :initarg :vibration-out
+    :initform (error ":vibration-out missing")
+    :accessor vibration-out-of
+    :type vibration-out-port)))
 
 
 (defclass wire (actor)
