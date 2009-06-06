@@ -101,8 +101,6 @@
 
 (defclass with-id ()     ; abstract
   ((id
-    :initarg :id
-    :initform (error ":id missing")
     :reader id-of
     :type id-type
     :documentation "Unique id")))
@@ -206,6 +204,24 @@
 (defparameter *out->in* (make-hash-table))
 
 
+;; INITIALIZE-INSTANCE
+
+(defmethod initialize-instance :after ((pt port) &key)
+  (setf (slot-value pt 'id)
+	(incf *fresh-port-id*)))
+
+(defun gettime ()
+  *clock*)
+
+(defmethod initialize-instance :after ((ev event) &key)
+  (setf (slot-value ev 'id)
+	(incf *fresh-event-id*)))
+
+
+(defmethod initialize-instance :after ((obj object) &key)
+  (setf (slot-value obj 'id)
+	(incf *fresh-object-id*)))
+
 
 ;; FUNCTIONS AND METHODS
 
@@ -216,18 +232,6 @@
 (defun path-starts-with (seq test)
   (equal (subseq seq 0 (length test))
 	 test))
-
-
-(defun fresh-object-id ()
-  (incf *fresh-object-id*))
-
-
-(defun fresh-event-id ()
-  (incf *fresh-event-id*))
-
-
-(defun fresh-port-id ()
-  (incf *fresh-port-id*))
 
 
 (defun sort-events (evs)
