@@ -26,10 +26,12 @@
 ;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 (declaim (optimize debug safety (speed 0)))
 
 
 ;; OVERVIEW
+;;
 ;; CSP-SIM simulates a simple scenario in which two cans are connected
 ;; by a string (let's call it wire from now on).  Talk into a can and
 ;; the wire will transmit the sound to the other can.
