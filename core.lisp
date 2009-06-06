@@ -182,6 +182,7 @@
 
 (defparameter *fresh-object-id* 0)
 (defparameter *fresh-event-id* 0)
+(defparameter *fresh-port-id* 0)
 
 (defparameter *clock* 0)
 
@@ -206,6 +207,10 @@
 
 (defun fresh-event-id ()
   (incf *fresh-event-id*))
+
+
+(defun fresh-port-id ()
+  (incf *fresh-port-id*))
 
 
 (defun sort-events (evs)
