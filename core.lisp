@@ -223,10 +223,6 @@
 
 ;; FUNCTIONS AND METHODS
 
-(defun gettime ()
-  *clock*)
-
-
 (defun path-starts-with (seq test)
   (equal (subseq seq 0 (length test))
 	 test))
