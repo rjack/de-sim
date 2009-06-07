@@ -247,7 +247,7 @@
 
 
 (defmethod components-list ((sim simulator))
-  (error "override me!"))
+  (error "specialize me!"))
 
 
 (defmethod assign-path ((obj object) (sim simulator))
