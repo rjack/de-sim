@@ -51,6 +51,7 @@
    :fresh-object-id :fresh-event-if :fresh-port-id
    :sort-events
    :i/o-connect :i/o-connected :i/o-disconnect
+   :put :handle-input
    :component-list
    :assign-path
    :path
