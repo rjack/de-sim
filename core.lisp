@@ -85,6 +85,14 @@
   (:documentation "Disconnect src."))
 
 
+(defgeneric put (port object)
+  (:documentation "TODO"))
+
+
+(defgeneric handle-input (actor in-port object)
+  (:documentation "TODO"))
+
+
 
 ;; TYPES
 
@@ -244,6 +252,17 @@
 
 (defmethod i/o-disconnect ((out out-port))
   (remhash (id-of out) *out->in*))
+
+
+(defmethod put ((in in-port) (obj object))
+  (handle-input (owner-of in) in obj))
+
+
+(defmethod put ((out out-port) (obj object))
+  (multiple-value-bind (in connected-p) (i/o-connected out)
+    (if (not connected-p)
+	(error 'error-invalid)
+	(put in obj))))
 
 
 (defmethod components-list ((sim simulator))
