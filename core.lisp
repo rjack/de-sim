@@ -140,7 +140,7 @@
 (defclass object (with-id)
   ((parents-path
     :initarg :parents-path
-    :initform (error ":parents-path missing")
+    :initform (list)
     :accessor parents-path-of
     :type list
     :documentation "A list of id telling where the object is in the object tree.
