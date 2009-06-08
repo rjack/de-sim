@@ -258,6 +258,16 @@
   (handle-input (owner-of in) in obj))
 
 
+(defmethod put ((in stream-in-port) (none (eql nil)))
+  (handle-input (owner-of in)
+		in
+		(read-line (stream-of in) nil)))
+
+
+(defmethod put ((out stream-out-port) (str string))
+  (format (stream-of out) "~a" str))
+
+
 (defmethod put ((out out-port) (obj object))
   (multiple-value-bind (in connected-p) (i/o-connected out)
     (if (not connected-p)
