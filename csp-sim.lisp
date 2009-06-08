@@ -232,35 +232,86 @@
     csp))
 
 
+
 (defun vibration->voice (vi)
   (declare (vibration vi))
-  (the vibration
-    (make-instance 'vibration :message (message-of vi))))
+  (make-instance 'vibration :message (message-of vi)))
 
 
 (defun voice->vibration (vo)
   (declare (voice vo))
-  (the vibration
-    (make-instance 'vibration :message (message-of vo))))
+  (make-instance 'vibration :message (message-of vo)))
 
 
+(defmethod components-list ((csp csp-scenario))
+  (with-accessors ((cans cans-of) (persons persons-of)
+		   (wire wire-of)) csp
+    (list wire (car cans) (cdr cans) (car persons) (cdr persons))))
+
+
+;; PERSON BEHAVIOUR
+
+;; schedulable
 (defmethod think ((p person) (evs list))
-  (schedule p (make-instance 'i/o-event
-			     :time (gettime evs)
-			     :fn #'put
-			     :args (list (thought-in-of p)))))
+  (schedule p evs (make-instance 'event
+				 :owner-path (path p)
+				 :time (gettime evs)
+				 :fn #'handle-input
+				 :args (list (thought-in-of p)
+					     nil))))
 
 
-(defmethod handle-input ((p person) (in thought-in-port) (str string))
-  (put (voice-out-of p)
-       (make-instance 'voice :message str)))
+;; schedulable
+(defmethod handle-input ((p person) (evs list) (in thought-in-port)
+			 (str string))
+  "thought-in ---> voice-out"
+  (let ((vo (make-instance 'voice :message str)))
+    (schedule p evs (make-instance 'event
+				   :owner-path (path p)
+				   :time (gettime evs)
+				   :fn #'put
+				   :args (list (voice-out-of p)
+					       vo)))))
+
+
+;; schedulable
+(defmethod handle-input ((p person) (evs list) (in voice-in-port)
+			 (vo voice))
+  "voice-in ---> thought-out"
+  (schedule p evs (make-instance 'event
+				 :owner-path (path p)
+				 :time (gettime evs)
+				 :fn #'put
+				 :args (list (thought-out-of p)
+					     (message-of vo)))))
+
+
+;; CAN BEHAVIOUR
+
+;; schedulable
+(defmethod handle-input ((c can) (evs list) (in voice-in-port)
+			 (vo voice))
+  "voice-in ---> vibration-out"
+  (schedule c evs (make-instance 'event
+				 :owner-path (path c)
+				 :time (gettime evs)
+				 :fn #'put
+				 :args (list (vibration-out-of c)
+					     (voice->vibration vo)))))
 
 
 (defmethod run ((csp csp-scenario))
   (labels ((run-rec (csp evs)
 	     (if (null evs)
 		 csp
-		 (multiple-value-call #'run-rec (evolve csp evs)))))
-    (multiple-value-bind (evs csp)
-	(schedule (events-of csp) 0 #'think (car (persons-of csp)))
-      (run-rec csp evs))))
+		 (multiple-value-call #'run-rec
+		   (evolve csp evs)))))
+    (with-accessors ((prss persons-of)) csp
+      (multiple-value-bind (act evs)
+	  (schedule (car prss) nil
+		    (make-instance 'event
+				   :owner-path (path (car prss))
+				   :time 0
+				   :fn #'think))
+	(setf (car prss) act)
+	(run-rec csp evs)))))
