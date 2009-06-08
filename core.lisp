@@ -27,8 +27,7 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-(declaim (optimize debug safety (speed 0))
-	 (sb-ext:muffle-conditions sb-ext:compiler-note))
+(declaim (optimize debug safety (speed 0)))
 
 
 ;; OVERVIEW
@@ -68,10 +67,6 @@
   (:documentation "TODO"))
 
 
-(defgeneric schedule (events delay function actor &rest args)
-  (:documentation "TODO"))
-
-
 (defgeneric i/o-connect (src dest)
   (:documentation "Connect src to dest."))
 
@@ -85,11 +80,15 @@
   (:documentation "Disconnect src."))
 
 
-(defgeneric put (port object)
+(defgeneric handle-input (actor events in-port something)
   (:documentation "TODO"))
 
 
-(defgeneric handle-input (actor in-port object)
+(defgeneric put (actor events out-port something)
+  (:documentation "TODO"))
+
+
+(defgeneric schedule (actor events event)
   (:documentation "TODO"))
 
 
@@ -231,13 +230,22 @@
 
 ;; FUNCTIONS AND METHODS
 
+
+(let ((clock 0))
+  (defun gettime (evs)
+    (if (null evs)
+	clock
+	(setf clock
+	      (time-of (first evs))))))
+
+
 (defun path-starts-with (seq test)
   (equal (subseq seq 0 (length test))
 	 test))
 
 
 (defun sort-events (evs)
-  (sort evs #'< :key #'time-of))
+  (stable-sort evs #'< :key #'time-of))
 
 
 (defmethod i/o-connect ((out out-port) (in in-port))
@@ -254,25 +262,41 @@
   (remhash (id-of out) *out->in*))
 
 
-(defmethod put ((in in-port) (obj object))
-  (handle-input (owner-of in) in obj))
+;; schedulable
+(defmethod handle-input ((act actor) (evs list) (in in-port)
+			 (obj object))
+  (error "specialize me!"))
 
 
-(defmethod put ((in stream-in-port) (none (eql nil)))
-  (handle-input (owner-of in)
-		in
-		(read-line (stream-of in) nil)))
+;; schedulable
+(defmethod handle-input ((act actor) (evs list) (in stream-in-port)
+			 (obj null))
+  (the (values actor list)
+    (handle-input act evs in
+		  (read-line (stream-of in) nil))))
 
 
-(defmethod put ((out stream-out-port) (str string))
-  (format (stream-of out) "~a" str))
+;; schedulable
+(defmethod put ((act actor) (evs list) (out stream-out-port)
+		(str string))
+  (format (stream-of out) "~a" str)
+  (values act evs))
 
 
-(defmethod put ((out out-port) (obj object))
-  (multiple-value-bind (in connected-p) (i/o-connected out)
-    (if (not connected-p)
-	(error 'error-invalid)
-	(put in obj))))
+;; schedulable
+(defmethod put ((act actor) (evs list) (out out-port) (obj object))
+  (multiple-value-bind (in connected-p)
+      (i/o-connected out)
+    (with-accessors ((dest owner-of)) in
+      (if (not connected-p)
+	  (error 'error-invalid)
+	  (the (values actor list)
+	    (schedule dest evs
+		      (make-instance 'event
+				     :owner-path (path dest)
+				     :time (gettime evs)
+				     :fn #'handle-input
+				     :args (list in obj))))))))
 
 
 (defmethod components-list ((sim simulator))
@@ -296,26 +320,9 @@
 	 (owner-path-of ev)))
 
 
-;; FIXME!
-;; don't create event here, take it as argument
-;; example call in csp-sim:think
-;; handle i/o-events (maybe with properly specialized method)
-(defmethod schedule ((all-events list) at (fn function) (act actor)
-		     &rest args)
-  (declare (time-type at))
-  (let ((ev (apply 'make-instance
-		   'event
-		   ;; building arguments for make-instance:
-		   ;; if args is nil, leave slot unbound
-		   (append (list :time at
-				 :fn fn
-				 :owner-path (path act))
-			   (if (null args)
-			       nil
-			       (list :args args))))))
-    (values (the list (sort-events (cons ev all-events)))
-	    (the actor (add-event act ev))
-	    (the event ev))))
+(defmethod schedule ((act actor) (evs list) (ev event))
+  (values (the actor (add-event act ev))
+	  (the list (sort-events (cons ev evs)))))
 
 
 (defmethod add-event ((act actor) (ev event))
@@ -324,33 +331,40 @@
   act)
 
 
+(defmethod pop-event ((act actor))
+  (values act
+	  (the event
+	    (pop (events-of act)))))
+
+
 (defmethod evolve ((act actor) (evs list))
-  (let ((ev (first evs)))
-    (if (belongs act ev)
-	(the (values actor list)
-	  (apply (fn-of ev)
-		 (append (list act evs)
-			 (if (slot-boundp ev 'args)
-			     (args-of ev)))))
-	(error 'error-invalid))))
+  (multiple-value-bind (act ev)
+      (pop-event act)
+    (assert (eql ev (first evs)) nil "ev is not the first event!")
+    (the (values actor list)
+      (apply (fn-of ev)
+	     (append (list act (rest evs))
+		     (if (slot-boundp ev 'args)
+			 (args-of ev)))))))
 
 
 (defmethod evolve ((sim simulator) (evs list))
   ;; FIXME!
   ;; cases:
-  ;; i/o-event: apply accordingly
   ;; event: belongs to sim -> call next method (sim behave as actor, actually)
   ;;        belongs to a direct component of sim
   ;;        -> evolve that component and substitute its reference
   ;;        belongs to someone else -> evolve the child involved
   (let ((next-ev (first evs)))
-    (if (belongs sim next-ev)
-	(call-next-method)
-	(let ((evolving (find-if (lambda (component)
-				   (path-starts-with (owner-path-of next-ev)
-						     (path component)))
-				 (components-list sim))))
-	  (if evolving
-	      (evolve evolving evs)
-	      ;; next-ev's owner not found, discard it and keep going
-	      (evolve sim (rest evs)))))))
+    (multiple-value-bind (act evs)
+	(if (belongs sim next-ev)
+	    (call-next-method)
+	    (let ((evolving (find-if (lambda (component)
+				       (path-starts-with (owner-path-of next-ev)
+							 (path component)))
+				     (components-list sim))))
+	      (if evolving
+		  (evolve evolving evs)
+		  ;; next-ev's owner not found, discard it and keep going
+		  (evolve sim (rest evs)))))
+      (values sim evs))))

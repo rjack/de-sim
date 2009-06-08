@@ -44,6 +44,7 @@
    :object :parents-path-of
    :actor :events-of
    :simulator
+   :gettime
    :port :owner-of
    :in-port :out-port
    :stream-in-port :stream-out-port :stream-of
@@ -52,7 +53,7 @@
    :sort-events
    :i/o-connect :i/o-connected :i/o-disconnect
    :put :handle-input
-   :component-list
+   :components-list
    :assign-path
    :path
    :belongs
