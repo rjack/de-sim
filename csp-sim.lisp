@@ -33,10 +33,16 @@
 ;; OVERVIEW
 ;;
 ;; CSP-SIM simulates a simple scenario in which two cans are connected
-;; by a string (let's call it wire from now on).  Talk into a can and
-;; the wire will transmit the sound to the other can.
+;; by a string (let's call it wire from now). A person talks into a
+;; can and the wire will transmit the sound to the other can, where
+;; the second person will hear it.
 ;;
 ;; Components:
+;;
+;;     thought-in-port  --> +--------+ --> voice-out-port
+;;                          | PERSON |
+;;     thought-out-port <-- +--------+ <-- voice-in-port
+;;
 ;;
 ;;     voice-in-port  --> +-----+ --> vibration-out-port
 ;;                        | CAN |
@@ -55,6 +61,10 @@
 (in-package :csp-sim)
 
 
+(defgeneric think (person events)
+  (:documentation "TODO"))
+
+
 (defclass vibration-in-port (in-port)
   nil)
 
@@ -68,6 +78,14 @@
 
 
 (defclass voice-out-port (out-port)
+  nil)
+
+
+(defclass thought-in-port (stream-in-port)
+  nil)
+
+
+(defclass thought-out-port (stream-out-port)
   nil)
 
 
@@ -87,68 +105,71 @@
     :type string)))
 
 
-(defclass can (actor)
-  ((voice-in
-    :initarg :voice-in
-    :initform (error ":voice-in missing")
+(defclass person (actor)
+  ((name
+    :initarg :name
+    :initform (error ":name missing")
+    :reader name-of
+    :type string)
+   (thought-in
+    :accessor thought-in-of
+    :type thought-in-port)
+   (thought-out
+    :accessor thought-out-of
+    :type thought-out-port)
+   (voice-in
     :accessor voice-in-of
     :type voice-in-port)
    (voice-out
-    :initarg :voice-out
-    :initform (error ":voice-out missing")
+    :accessor voice-out-of
+    :type voice-out-port)))
+
+
+(defclass can (actor)
+  ((voice-in
+    :accessor voice-in-of
+    :type voice-in-port)
+   (voice-out
     :accessor voice-out-of
     :type voice-out-port)
    (vibration-in
-    :initarg :vibration-in
-    :initform (error ":vibration-in missing")
     :accessor vibration-in-of
     :type vibration-in-port)
    (vibration-out
-    :initarg :vibration-out
-    :initform (error ":vibration-out missing")
     :accessor vibration-out-of
     :type vibration-out-port)))
 
 
 (defclass wire (actor)
   ((a-vibration-in
-    :initarg :a-vibration-in
-    :initform (error ":a-vibration-in missing")
     :accessor a-vibration-in-of
     :type vibration-in-port)
    (a-vibration-out
-    :initarg :a-vibration-out
-    :initform (error ":a-vibration-out missing")
     :accessor a-vibration-out-of
     :type vibration-out-port)
    (b-vibration-in
-    :initarg :b-vibration-in
-    :initform (error ":b-vibration-in missing")
     :accessor b-vibration-in-of
     :type vibration-in-port)
    (b-vibration-out
-    :initarg :b-vibration-out
-    :initform (error ":b-vibration-out missing")
     :accessor b-vibration-out-of
     :type vibration-out-port)))
 
 
 (defclass csp-scenario (simulator)
-  ((cans
-    :initarg :cans
-    :initform (error ":cans missing")
-    :reader cans-of
+  ((persons
+    :accessor persons-of
+    :type (cons person person))
+   (cans
+    :accessor cans-of
     :type (cons can can))
    (wire
-    :initarg :wire
-    :initform (error ":wire missing")
-    :reader wire-of
+    :accessor wire-of
     :type wire)))
 
 
 ;; INITIALIZE INSTANCE
 
-(defmethod initialize-instance ((c can) &key)
+(defmethod initialize-instance :after ((c can) &key)
   (with-accessors ((voi< voice-in-of) (voi> voice-out-of)
 		   (vib< vibration-in-of) (vib> vibration-out-of)) c
     (setf voi< (make-instance 'voice-in-port :owner c))
@@ -157,10 +178,89 @@
     (setf vib> (make-instance 'vibration-out-port :owner c))))
 
 
-(defmethod initialize-instance ((w wire) &key)
+(defmethod initialize-instance :after ((w wire) &key)
   (with-accessors ((a< a-vibration-in-of) (a> a-vibration-out-of)
 		   (b< b-vibration-in-of) (b> b-vibration-out-of)) w
     (setf a< (make-instance 'vibration-in-port :owner w))
     (setf a> (make-instance 'vibration-out-port :owner w))
     (setf b< (make-instance 'vibration-in-port :owner w))
     (setf b> (make-instance 'vibration-out-port :owner w))))
+
+
+(defmethod initialize-instance :after ((p person) &key)
+  (with-accessors ((tho< thought-in-of) (tho> thought-out-of)
+		   (voi< voice-in-of) (voi> voice-out-of)) p
+    (setf voi< (make-instance 'voice-in-port :owner p))
+    (setf voi> (make-instance 'voice-out-port :owner p))
+    (setf tho< (make-instance 'thought-in-port :owner p))
+    (setf tho> (make-instance 'thought-out-port :owner p))))
+
+
+(defun setup-csp ()
+  (let* ((csp (make-instance 'csp-scenario))
+	 (a (make-instance 'person :parents-path (path csp)
+			   :name "Alice"))
+	 (b (make-instance 'person :parents-path (path csp)
+			   :name "Bob"))
+	 (ac (make-instance 'can :parents-path (path csp)))
+	 (bc (make-instance 'can :parents-path (path csp)))
+	 (w (make-instance 'wire :parents-path (path csp))))
+    ;; assign components
+    (setf (cans-of csp)
+	  (cons ac bc))
+    (setf (wire-of csp)
+	  w)
+    (setf (persons-of csp)
+	  (cons a b))
+    ;; setup i/o connections between ports
+    ;; Alice with her can
+    (i/o-connect (voice-out-of a)
+		 (voice-in-of ac))
+    ;; Bob with his can
+    (i/o-connect (voice-out-of b)
+		 (voice-in-of bc))
+    ;; Alice's can with Alice's end of wire
+    (i/o-connect (vibration-out-of ac)
+		 (a-vibration-in-of w))
+    (i/o-connect (a-vibration-out-of w)
+		 (vibration-in-of ac))
+    ;; Bob's can with Bob's end of wire
+    (i/o-connect (vibration-out-of bc)
+		 (b-vibration-in-of w))
+    (i/o-connect (b-vibration-out-of w)
+		 (vibration-in-of bc))
+    csp))
+
+
+(defun vibration->voice (vi)
+  (declare (vibration vi))
+  (the vibration
+    (make-instance 'vibration :message (message-of vi))))
+
+
+(defun voice->vibration (vo)
+  (declare (voice vo))
+  (the vibration
+    (make-instance 'vibration :message (message-of vo))))
+
+
+(defmethod think ((p person) (evs list))
+  (schedule p (make-instance 'i/o-event
+			     :time (gettime evs)
+			     :fn #'put
+			     :args (list (thought-in-of p)))))
+
+
+(defmethod handle-input ((p person) (in thought-in-port) (str string))
+  (put (voice-out-of p)
+       (make-instance 'voice :message str)))
+
+
+(defmethod run ((csp csp-scenario))
+  (labels ((run-rec (csp evs)
+	     (if (null evs)
+		 csp
+		 (multiple-value-call #'run-rec (evolve csp evs)))))
+    (multiple-value-bind (evs csp)
+	(schedule (events-of csp) 0 #'think (car (persons-of csp)))
+      (run-rec csp evs))))
