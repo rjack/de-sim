@@ -296,6 +296,10 @@
 	 (owner-path-of ev)))
 
 
+;; FIXME!
+;; don't create event here, take it as argument
+;; example call in csp-sim:think
+;; handle i/o-events (maybe with properly specialized method)
 (defmethod schedule ((all-events list) at (fn function) (act actor)
 		     &rest args)
   (declare (time-type at))
@@ -316,20 +320,29 @@
 
 (defmethod add-event ((act actor) (ev event))
   (setf (events-of act)
-	(sort-events (cons ev (events-of act)))))
+	(sort-events (cons ev (events-of act))))
+  act)
 
 
 (defmethod evolve ((act actor) (evs list))
   (let ((ev (first evs)))
     (if (belongs act ev)
-	(apply (fn-of ev)
-	       (append (list act (time-of ev))
-		       (if (slot-boundp ev 'args)
-			   (args-of ev))))
+	(the (values actor list)
+	  (apply (fn-of ev)
+		 (append (list act evs)
+			 (if (slot-boundp ev 'args)
+			     (args-of ev)))))
 	(error 'error-invalid))))
 
 
 (defmethod evolve ((sim simulator) (evs list))
+  ;; FIXME!
+  ;; cases:
+  ;; i/o-event: apply accordingly
+  ;; event: belongs to sim -> call next method (sim behave as actor, actually)
+  ;;        belongs to a direct component of sim
+  ;;        -> evolve that component and substitute its reference
+  ;;        belongs to someone else -> evolve the child involved
   (let ((next-ev (first evs)))
     (if (belongs sim next-ev)
 	(call-next-method)
