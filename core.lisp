@@ -313,7 +313,7 @@
   (declare (id-type id))
   (assert (eql id (id-of obj)) nil "ids don't match!")
   (setf (gethash id (components-of sim))
-	obj)
+	(assign-path obj sim))
   sim)
 
 
