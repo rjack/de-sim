@@ -54,6 +54,7 @@
    :i/o-connect :i/o-connected :i/o-disconnect
    :put :handle-input
    :components-list
+   :update-component
    :assign-path
    :path
    :belongs
