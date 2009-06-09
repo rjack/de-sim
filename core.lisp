@@ -59,6 +59,10 @@
   (:documentation "TODO"))
 
 
+(defgeneric pop-event (actor)
+  (:documentation "TODO"))
+
+
 (defgeneric path (object)
   (:documentation "TODO"))
 
