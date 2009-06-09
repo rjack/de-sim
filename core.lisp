@@ -376,22 +376,18 @@
 
 
 (defmethod evolve ((sim simulator) (evs list))
-  ;; FIXME!
-  ;; cases:
-  ;; event: belongs to sim -> call next method (sim behave as actor, actually)
-  ;;        belongs to a direct component of sim
-  ;;        -> evolve that component and substitute its reference
-  ;;        belongs to someone else -> evolve the child involved
   (let ((next-ev (first evs)))
-    (multiple-value-bind (act evs)
-	(if (belongs sim next-ev)
-	    (call-next-method)
-	    (let ((evolving (find-if (lambda (component)
-				       (path-starts-with (owner-path-of next-ev)
-							 (path component)))
-				     (components-list sim))))
-	      (if evolving
-		  (evolve evolving evs)
-		  ;; next-ev's owner not found, discard it and keep going
-		  (evolve sim (rest evs)))))
-      (values sim evs))))
+    (if (belongs sim next-ev)
+	(call-next-method)
+	(let ((evolving (find-if (lambda (component)
+				   (path-starts-with (owner-path-of next-ev)
+						     (path component)))
+				 (components-list sim))))
+	  (if evolving
+	      (let ((id (id-of evolving)))
+		(multiple-value-bind (act evs) (evolve evolving evs)
+		  (values (the simulator
+			    (update-component sim act id))
+			  evs)))
+	      ;; next-ev's owner not found, discard it and keep going
+	      (evolve sim (rest evs)))))))
