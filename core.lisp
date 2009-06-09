@@ -386,11 +386,10 @@
 				   (path-starts-with (owner-path-of next-ev)
 						     (path component)))
 				 (components-list sim))))
-	  (if evolving
-	      (let ((id (id-of evolving)))
-		(multiple-value-bind (act evs) (evolve evolving evs)
-		  (values (the simulator
-			    (update-component sim act id))
-			  evs)))
+	  (if (null evolving)
 	      ;; next-ev's owner not found, discard it and keep going
-	      (evolve sim (rest evs)))))))
+	      (evolve sim (rest evs))
+	      (multiple-value-bind (act evs) (evolve evolving evs)
+		(values (the simulator
+			  (update-component sim act (id-of act)))
+			evs)))))))
