@@ -327,7 +327,10 @@
 
 
 (defmethod components-list ((sim simulator))
-  (loop :for obj :being :the :hash-values :in sim :collect obj))
+  (loop
+     :for obj
+     :being :the :hash-values :in (components-of sim)
+     :collect obj))
 
 
 (defmethod assign-path ((obj object) (sim simulator))
