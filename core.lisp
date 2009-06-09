@@ -51,6 +51,10 @@
   components."))
 
 
+(defgeneric update-component (simulator object object-id)
+  (:documentation "TODO"))
+
+
 (defgeneric assign-path (object simulator)
   (:documentation "TODO"))
 
@@ -167,8 +171,10 @@
 
 
 (defclass simulator (actor)
-  ;; components slots in subclasses
-  nil)
+  ((components
+    :initform (make-hash-table)
+    :reader components-of
+    :type hash-table)))
 
 
 (defclass port (with-id)
@@ -303,8 +309,25 @@
 				     :args (list in obj))))))))
 
 
+(defmethod update-component ((sim simulator) (obj object) id)
+  (declare (id-type id))
+  (assert (eql id (id-of obj)) nil "ids don't match!")
+  (setf (gethash id (components-of sim))
+	obj)
+  sim)
+
+
+(defmethod update-component ((sim simulator) (obj null) id)
+  (declare (id-type id))
+  (multiple-value-bind (val val-p) (gethash id (components-of sim))
+    (declare (ignore val))
+    (assert val-p nil "cannot remove obj, not a component of sim!")
+    (remhash id (components-of sim))
+    sim))
+
+
 (defmethod components-list ((sim simulator))
-  (error "specialize me!"))
+  (loop :for obj :being :the :hash-values :in sim :collect obj))
 
 
 (defmethod assign-path ((obj object) (sim simulator))
