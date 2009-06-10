@@ -27,9 +27,6 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-(declaim (optimize debug safety (speed 0)))
-
-
 (defpackage :org.altervista.rjack.de-sim
   (:nicknames :de-sim)
   (:use :common-lisp)
