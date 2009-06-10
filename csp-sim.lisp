@@ -28,6 +28,7 @@
 
 
 (declaim (optimize debug safety (speed 0)))
+;(declaim (optimize (debug 0) (safety 0) speed))
 
 
 ;; OVERVIEW
@@ -258,6 +259,19 @@
 (defun voice->vibration (vo)
   (declare (voice vo))
   (make-instance 'vibration :message (message-of vo)))
+
+
+(defmethod print-object ((p person) s)
+  (print-unreadable-object (p s :type t :identity t)
+    (format s "path: ~a name: ~a" (path p) (name-of p))))
+
+
+(defmethod print-object ((csp csp-scenario) s)
+  (with-accessors ((alice alice-of) (bob bob-of)
+		   (a-can a-can-of) (b-can b-can-of)
+		   (wire wire-of)) csp
+    (print-unreadable-object (csp s :type t :identity t)
+      (format s "path: ~a" (path csp)))))
 
 
 
