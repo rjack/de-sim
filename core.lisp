@@ -28,6 +28,7 @@
 
 
 (declaim (optimize debug safety (speed 0)))
+;(declaim (optimize (debug 0) (safety 0) speed))
 
 
 ;; OVERVIEW
@@ -238,6 +239,16 @@
 	(incf *fresh-object-id*)))
 
 
+;; PRINT-OBJECT
+
+(defmethod print-object ((e event) s)
+  (print-unreadable-object (e s :type t :identity t)
+    (format s "owner-path: ~a time: ~a fn: ~a"
+	    (owner-path-of e) (time-of e) (fn-of e))
+    (when (slot-boundp e 'args)
+      (format s " args: ~a" (args-of e)))))
+
+
 ;; FUNCTIONS AND METHODS
 
 
@@ -289,7 +300,7 @@
 ;; schedulable
 (defmethod put ((act actor) (evs list) (out stream-out-port)
 		(str string))
-  (format (stream-of out) "~a" str)
+  (format (stream-of out) "~&~a~%" str)
   (values act evs))
 
 
