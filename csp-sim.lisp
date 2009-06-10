@@ -368,12 +368,11 @@
 		 (multiple-value-call #'run-rec
 		   (evolve csp evs)))))
     (with-accessors ((alice alice-of)) csp
-      (let ((alice-id (id-of alice)))
-	(multiple-value-bind (act evs)
-	    (schedule alice nil
-		      (make-instance 'event
-				     :owner-path (path alice)
-				     :time 0
-				     :fn #'think))
-	  (run-rec (update-component csp act alice-id)
-		   evs))))))
+      (multiple-value-bind (act evs)
+	  (schedule alice nil
+		    (make-instance 'event
+				   :owner-path (path alice)
+				   :time 0
+				   :fn #'think))
+	(run-rec (update-component csp act (id-of act))
+		 evs)))))
