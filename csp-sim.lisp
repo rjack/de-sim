@@ -190,27 +190,27 @@
   (with-accessors ((voi< voice-in-of) (voi> voice-out-of)
 		   (vib< vibration-in-of) (vib> vibration-out-of)) c
     (setf voi< (make-instance 'voice-in-port :owner c))
-    (setf voi> (make-instance 'voice-out-port :owner c))
+    (setf voi> (make-instance 'voice-out-port))
     (setf vib< (make-instance 'vibration-in-port :owner c))
-    (setf vib> (make-instance 'vibration-out-port :owner c))))
+    (setf vib> (make-instance 'vibration-out-port))))
 
 
 (defmethod initialize-instance :after ((w wire) &key)
   (with-accessors ((a< a-vibration-in-of) (a> a-vibration-out-of)
 		   (b< b-vibration-in-of) (b> b-vibration-out-of)) w
     (setf a< (make-instance 'vibration-in-port :owner w))
-    (setf a> (make-instance 'vibration-out-port :owner w))
+    (setf a> (make-instance 'vibration-out-port))
     (setf b< (make-instance 'vibration-in-port :owner w))
-    (setf b> (make-instance 'vibration-out-port :owner w))))
+    (setf b> (make-instance 'vibration-out-port))))
 
 
 (defmethod initialize-instance :after ((p person) &key)
   (with-accessors ((tho< thought-in-of) (tho> thought-out-of)
 		   (voi< voice-in-of) (voi> voice-out-of)) p
     (setf voi< (make-instance 'voice-in-port :owner p))
-    (setf voi> (make-instance 'voice-out-port :owner p))
+    (setf voi> (make-instance 'voice-out-port))
     (setf tho< (make-instance 'thought-in-port :owner p))
-    (setf tho> (make-instance 'thought-out-port :owner p))))
+    (setf tho> (make-instance 'thought-out-port))))
 
 
 (defmethod initialize-instance :after ((csp csp-scenario) &key)
