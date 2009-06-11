@@ -179,15 +179,20 @@
 
 
 (defclass port (with-id)
+  nil)
+
+
+(defclass in-port (port)
   ((owner
     :initarg :owner
     :initform (error ":owner missing")
     :accessor owner-of
-    :type actor)))
-
-
-(defclass in-port (port)
-  nil)
+    :type actor)
+   (busy
+    :initarg :busy
+    :initform nil
+    :accessor busy
+    :type boolean)))
 
 
 (defclass out-port (port)
