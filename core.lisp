@@ -179,7 +179,11 @@
 
 
 (defclass port (with-id)
-  nil)
+  ((busy-flag
+    :initarg :busy
+    :initform nil
+    :accessor busy-flag-of
+    :type boolean)))
 
 
 (defclass in-port (port)
@@ -187,12 +191,7 @@
     :initarg :owner
     :initform (error ":owner missing")
     :accessor owner-of
-    :type actor)
-   (busy
-    :initarg :busy
-    :initform nil
-    :accessor busy
-    :type boolean)))
+    :type actor)))
 
 
 (defclass out-port (port)
