@@ -215,32 +215,25 @@
 
 
 
-;; PARAMETERS
-
-(defparameter *fresh-object-id* 0)
-(defparameter *fresh-event-id* 0)
-(defparameter *fresh-port-id* 0)
-
-(defparameter *clock* 0)
-
-(defparameter *out->in* (make-hash-table))
-
-
 ;; INITIALIZE-INSTANCE
 
-(defmethod initialize-instance :after ((pt port) &key)
-  (setf (slot-value pt 'id)
-	(incf *fresh-port-id*)))
+(let ((fresh-port-id 0))
+  (defmethod initialize-instance :after ((pt port) &key)
+    (setf (slot-value pt 'id)
+	  (incf fresh-port-id))))
 
 
-(defmethod initialize-instance :after ((ev event) &key)
-  (setf (slot-value ev 'id)
-	(incf *fresh-event-id*)))
+(let ((fresh-event-id 0))
+  (defmethod initialize-instance :after ((ev event) &key)
+    (setf (slot-value ev 'id)
+	  (incf fresh-event-id))))
 
 
-(defmethod initialize-instance :after ((obj object) &key)
-  (setf (slot-value obj 'id)
-	(incf *fresh-object-id*)))
+(let ((fresh-object-id 0))
+  (defmethod initialize-instance :after ((obj object) &key)
+    (setf (slot-value obj 'id)
+	  (incf fresh-object-id))))
+
 
 
 ;; PRINT-OBJECT
@@ -251,6 +244,7 @@
 	    (owner-path-of e) (time-of e) (fn-of e))
     (when (slot-boundp e 'args)
       (format s " args: ~a" (args-of e)))))
+
 
 
 ;; FUNCTIONS AND METHODS
