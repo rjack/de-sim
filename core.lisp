@@ -146,9 +146,10 @@
 
 
 (defclass object (with-id)
-  ((parents-path
-    :initarg :parents-path
-    :initform (list)
+  ((parent
+    :accessor parent-of
+    :type simulator)
+   (parents-path
     :accessor parents-path-of
     :type list
     :documentation "A list of id telling where the object is in the object tree.
@@ -172,17 +173,21 @@
 
 
 (defclass simulator (actor)
-  ((components
+  ((children-by-id
     :initform (make-hash-table)
-    :reader components-of
+    :reader children-by-id-of
+    :type hash-table)
+   (out-in-map
+    :initform (make-hash-table)
+    :reader out-in-map-of
     :type hash-table)))
 
 
 (defclass port (with-id)
-  ((busy-flag
-    :initarg :busy
+  ((busy-p
+    :initarg :busy-p
     :initform nil
-    :accessor busy-flag-of
+    :accessor busy-p-of
     :type boolean)))
 
 
@@ -191,11 +196,21 @@
     :initarg :owner
     :initform (error ":owner missing")
     :accessor owner-of
-    :type actor)))
+    :type actor)
+   (waiting-queue
+    :initform (list)
+    :accessor waiting-queue-of
+    :type list
+    :documentation "List of ids of actors waiting to use this port")))
 
 
 (defclass out-port (port)
-  nil)
+  ((waiting-p
+    :initform nil
+    :accessor waiting-p-of
+    :type boolean
+    :documentation "True if the owner of this port is waiting in order
+    to access it.")))
 
 
 (defclass stream-in-port (in-port)
@@ -267,18 +282,25 @@
   (stable-sort evs #'< :key #'time-of))
 
 
-(defmethod i/o-connect ((out out-port) (in in-port))
-  (setf (gethash (id-of out) *out->in*)
+(defmethod i/o-connect ((sim simulator) (out out-port) (in in-port))
+  (setf (gethash (id-of out) (out-in-map-of sim))
 	in)
-  in)
+  sim)
 
 
-(defmethod i/o-connected ((out out-port))
-  (gethash (id-of out) *out->in*))
+(defmethod i/o-connected ((sim simulator) (out out-port)
+  (gethash (id-of out) (out-in-map-of sim)))
 
 
-(defmethod i/o-disconnect ((out out-port))
-  (remhash (id-of out) *out->in*))
+(defmethod i/o-disconnect ((sim simulator) (out out-port))
+  (remhash (id-of out) (out-in-map-of sim))
+  sim)
+
+
+(defmethod handle-input :around ((sim simulator) (act actor)
+				 (evs list) (in in-port)
+				 (obj object))
+  ())
 
 
 ;; schedulable
@@ -296,26 +318,31 @@
 
 
 ;; schedulable
-(defmethod put ((act actor) (evs list) (out stream-out-port)
-		(str string))
+(defmethod put ((sim simulator) (act actor) (evs list)
+		(out stream-out-port) (str string))
   (format (stream-of out) "~&~a~%" str)
   (values act evs))
 
 
 ;; schedulable
-(defmethod put ((act actor) (evs list) (out out-port) (obj object))
+(defmethod put ((sim simulator) (act actor) (evs list) (out out-port)
+		(obj object))
   (multiple-value-bind (in connected-p)
       (i/o-connected out)
     (with-accessors ((dest owner-of)) in
-      (if (not connected-p)
-	  (error 'error-invalid)
-	  (the (values actor list)
-	    (schedule dest evs
-		      (make-instance 'event
-				     :owner-path (path dest)
-				     :time (gettime evs)
-				     :fn #'handle-input
-				     :args (list in obj))))))))
+      (cond ((not connected-p) (error 'error-invalid))
+	    ((busy-p-of out) (values (wait act out)
+				     evs))
+	    ((busy-p-of in) (values (wait act in)
+				    evs))
+	    (t (the (values actor list)
+		 (schedule dest evs
+			   (make-instance 'event
+					  :owner-path (path dest)
+					  :time (+ (delay act out obj)
+						 (gettime evs)
+					  :fn #'handle-input
+					  :args (list in obj)))))))))
 
 
 (defmethod update-component ((sim simulator) (obj object) id)
