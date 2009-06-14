@@ -42,64 +42,7 @@
 
 ;; GENERICS
 
-(defgeneric evolve (object events)
-  (:documentation "obj can execute its event and evolve
-  accordingly. Returns the new version of obj."))
-
-
-(defgeneric components-list (simulator)
-  (:documentation "Returns the list representation of their
-  components."))
-
-
-(defgeneric update-component (simulator object object-id)
-  (:documentation "TODO"))
-
-
-(defgeneric assign-path (object simulator)
-  (:documentation "TODO"))
-
-
-(defgeneric add-event (actor event)
-  (:documentation "TODO"))
-
-
-(defgeneric pop-event (actor)
-  (:documentation "TODO"))
-
-
-(defgeneric path (object)
-  (:documentation "TODO"))
-
-
-(defgeneric belongs (object event)
-  (:documentation "TODO"))
-
-
-(defgeneric i/o-connect (src dest)
-  (:documentation "Connect src to dest."))
-
-
-(defgeneric i/o-connected (src)
-  (:documentation "Return values: connected object and connected-p
-  boolean."))
-
-
-(defgeneric i/o-disconnect (src)
-  (:documentation "Disconnect src."))
-
-
-(defgeneric handle-input (actor events in-port something)
-  (:documentation "TODO"))
-
-
-(defgeneric put (actor events out-port something)
-  (:documentation "TODO"))
-
-
-(defgeneric schedule (actor events event)
-  (:documentation "TODO"))
-
+;;TODO
 
 
 ;; TYPES
@@ -297,10 +240,9 @@
   sim)
 
 
-(defmethod handle-input :around ((sim simulator) (act actor)
-				 (evs list) (in in-port)
-				 (obj object))
-  ())
+(defmethod wait ((act actor) (out out-port))
+  (setf (waiting-of out) t)
+  act)
 
 
 ;; schedulable
@@ -309,38 +251,57 @@
   (error "specialize me!"))
 
 
-;; schedulable
-(defmethod handle-input ((act actor) (evs list) (in stream-in-port)
-			 (obj null))
-  (the (values actor list)
-    (handle-input act evs in
-		  (read-line (stream-of in) nil))))
+(defmethod do-output ((act actor) (evs list) (out out-port)
+		      (obj object))
+  (restart-case (transition act evs out obj)
+    ;; waiting for the in port to be free
+    (wait-in (act evs in obj)
+      (setf (waiting-queue-of in)
+	    (append (waiting-queue-of in)
+		    (id-of act)))
+      (values act evs out obj))
+    ;; waiting for the out port to be free
+    (wait-out (act evs out obj)
+      (setf (waiting-of out) t)
+      (values act evs out obj))
+    ;; try again after a computed delay
+    (retry (act evs out obj)
+      (schedule act evs (make-instance 'event
+				       :owner-path (path act)
+				       :fn do-output
+				       :time (+ (gettime evs)
+						(retry-delay act out
+							     obj))
+				       :args (list out obj))))
+    ;; cancel output attempt
+    (cancel (act evs out obj)
+      (values act evs out obj))))
 
 
-;; schedulable
-(defmethod put ((sim simulator) (act actor) (evs list)
-		(out stream-out-port) (str string))
-  (format (stream-of out) "~&~a~%" str)
-  (values act evs))
+;; example of specializing method
+;(defmethod do-output ((act specialized-actor) (evs list)
+;		      (out out-port) (obj object))
+;; WARNING! if output attempt fails, obj must be stored inside of act
+;  (handler-bind ((error-invalid #'cancel)
+;		  (error-busy-out #'wait-out)
+;		  (error-busy-in #'wait-in))
+;    (call-next-method)))
 
 
-;; schedulable
-(defmethod put ((sim simulator) (act actor) (evs list) (out out-port)
-		(obj object))
+
+(defmethod transition ((act actor) (evs list) (out out-port)
+		       (obj object))
   (multiple-value-bind (in connected-p)
-      (i/o-connected out)
+      (i/o-connected (parent-of sim) out)
     (with-accessors ((dest owner-of)) in
       (cond ((not connected-p) (error 'error-invalid))
-	    ((busy-p-of out) (values (wait act out)
-				     evs))
-	    ((busy-p-of in) (values (wait act in)
-				    evs))
+	    ((busy-p-of out) (error 'error-busy-out))
+	    ((busy-p-of in) (error 'error-busy-in))
 	    (t (the (values actor list)
 		 (schedule dest evs
 			   (make-instance 'event
 					  :owner-path (path dest)
-					  :time (+ (delay act out obj)
-						 (gettime evs)
+					  :time (gettime evs)
 					  :fn #'handle-input
 					  :args (list in obj)))))))))
 
