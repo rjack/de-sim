@@ -286,13 +286,14 @@
 
 (defmethod retry-delay ((sim simulator) (evs list) (out out-port)
 			(obj object))
-  (error "specialize me!"))
+  10)
 
 
 ;; schedulable
 (defmethod handle-input ((sim simulator) (evs list) (in in-port)
 			 (obj object))
-  (error "specialize me!"))
+  (values (list (add-child sim obj))
+	  evs))
 
 
 (defmethod do-output ((sim simulator) (evs list) (out out-port)
@@ -357,13 +358,13 @@
 					:args (list in obj))))))))
 
 
-(defmethod update-child ((sim simulator) (obj object))
+(defmethod add-child ((sim simulator) (obj object))
   (setf (gethash (id-of obj) (children-by-id-of sim))
 	(assign-path obj sim))
   sim)
 
 
-(defmethod update-child ((sim simulator) (obj null))
+(defmethod remove-child ((sim simulator) (obj object))
   (multiple-value-bind (val val-p) (gethash (id-of obj)
 					    (children-by-id-of sim))
     (declare (ignore val))
@@ -372,11 +373,11 @@
     sim))
 
 
-(defmethod update-children ((sim simulator) (ch list))
+(defmethod add-children ((sim simulator) (ch list))
   (if (null ch)
       sim
-      (update-children (update-child sim (first ch))
-		       (rest ch))))
+      (add-children (add-child sim (first ch))
+		    (rest ch))))
 
 
 (defmethod children ((sim simulator))
