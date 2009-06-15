@@ -298,7 +298,9 @@
 
 (defmethod do-output ((sim simulator) (evs list) (out out-port)
 		      (obj object))
-  (restart-case (transition sim evs out obj)
+  (restart-case (progn
+		  (transition sim evs out obj)
+		  (remove-child sim obj))
     ;; waiting for the destination's in-port to be free
     (wait-in (sim evs in obj)
       (setf (waiting-queue-of in)
@@ -380,6 +382,13 @@
 		    (rest ch))))
 
 
+(defmethod remove-children ((sim simulator) (ch list))
+  (if (null ch)
+      sim
+      (remove-children (remove-child sim (first ch))
+		       (rest ch))))
+
+
 (defmethod children ((sim simulator))
   (loop
      :for obj
@@ -441,5 +450,5 @@
 	      ;; else evolve and return values
 	      (multiple-value-bind (new-children new-evs)
 		  (evolve evolving evs)
-		(values (update-children sim new-children)
+		(values (add-children sim new-children)
 			new-evs)))))))
