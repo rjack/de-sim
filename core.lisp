@@ -58,15 +58,12 @@
 
 ;; CLASSES
 
-(defclass with-id ()     ; abstract
+
+(defclass event ()
   ((id
     :reader id-of
-    :type id-type
-    :documentation "Unique id")))
-
-
-(defclass event (with-id)
-  ((owner-path
+    :type id-type)
+   (owner-path
     :initarg :owner-path
     :initform (error ":owner-path missing")
     :accessor owner-path-of
@@ -88,10 +85,12 @@
     :type list)))
 
 
-(defclass object (with-id)
-  ((parent
-    :accessor parent-of
-    :type simulator)
+(defclass object ()
+  ((id
+    :reader id-of
+    :type id-type)
+   (parent
+    :accessor parent-of)
    (parents-path
     :accessor parents-path-of
     :type list
@@ -99,35 +98,35 @@
     Example: given the tree
       sim-0
         sim-1
-          act-2
+          sim-2
           obj-3
         obj-4
         sim-5
           obj-6
     the path of obj-6 is (0 5)
-    the paths of act-1 and obj-3 are the same (0 1)")))
+    the paths of sim-2 and obj-3 are the same (0 1)")))
 
 
-(defclass actor (object)
-  ((events
-    :accessor events-of
-    :initform (list)
-    :type list)))
-
-
-(defclass simulator (actor)
+(defclass simulator (object)
   ((children-by-id
     :initform (make-hash-table)
     :reader children-by-id-of
     :type hash-table)
+   (events
+    :accessor events-of
+    :initform (list)
+    :type list)
    (out-in-map
     :initform (make-hash-table)
     :reader out-in-map-of
     :type hash-table)))
 
 
-(defclass port (with-id)
-  ((busy-p
+(defclass port ()
+  ((id
+    :reader id-of
+    :type id-type)
+   (busy-p
     :initarg :busy-p
     :initform nil
     :accessor busy-p-of
@@ -139,12 +138,13 @@
     :initarg :owner
     :initform (error ":owner missing")
     :accessor owner-of
-    :type actor)
+    :type simulator)
    (waiting-queue
     :initform (list)
     :accessor waiting-queue-of
     :type list
-    :documentation "List of ids of actors waiting to use this port")))
+    :documentation "List of ids of the actors waiting to use this
+    port")))
 
 
 (defclass out-port (port)
@@ -171,6 +171,50 @@
     :reader stream-of
     :type stream)))
 
+
+;; CONDITIONS
+
+(define-condition i/o-transition-error (error)
+  ((sim :initarg :sim :reader sim-of :type simulator)
+   (evs :initarg :evs :reader evs-of :type list)
+   (port :initarg :port :reader port-of :type port)
+   (obj :initarg :obj :reader obj-of :type object)))
+
+
+(define-condition port-not-connected (i/o-transition-error)
+  nil)
+
+
+(define-condition out-port-busy (i/o-transition-error)
+  nil)
+
+
+(define-condition in-port-busy (i/o-transition-error)
+  nil)
+
+
+;; RESTART FUNCTIONS
+
+(defun wait (c)
+  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
+		   (obj obj-of)) c
+    (cond ((typep c 'out-port-busy)
+	   (invoke-restart 'wait-out sim evs port obj))
+	  ((typep c 'in-port-busy)
+	   (invoke-restart 'wait-in sim evs port obj))
+	  (t (error "Bad condition type!")))))
+
+
+(defun retry (c)
+  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
+		   (obj obj-of)) c
+    (invoke-restart 'retry sim evs port obj)))
+
+
+(defun cancel (c)
+  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
+		   (obj obj-of)) c
+    (invoke-restart 'cancel sim evs port obj)))
 
 
 ;; INITIALIZE-INSTANCE
@@ -231,7 +275,7 @@
   sim)
 
 
-(defmethod i/o-connected ((sim simulator) (out out-port)
+(defmethod i/o-connected ((sim simulator) (out out-port))
   (gethash (id-of out) (out-in-map-of sim)))
 
 
@@ -240,100 +284,111 @@
   sim)
 
 
-(defmethod wait ((act actor) (out out-port))
-  (setf (waiting-of out) t)
-  act)
+(defmethod retry-delay ((sim simulator) (evs list) (out out-port)
+			(obj object))
+  (error "specialize me!"))
 
 
 ;; schedulable
-(defmethod handle-input ((act actor) (evs list) (in in-port)
+(defmethod handle-input ((sim simulator) (evs list) (in in-port)
 			 (obj object))
   (error "specialize me!"))
 
 
-(defmethod do-output ((act actor) (evs list) (out out-port)
+(defmethod do-output ((sim simulator) (evs list) (out out-port)
 		      (obj object))
-  (restart-case (transition act evs out obj)
-    ;; waiting for the in port to be free
-    (wait-in (act evs in obj)
+  (restart-case (transition sim evs out obj)
+    ;; waiting for the destination's in-port to be free
+    (wait-in (sim evs in obj)
       (setf (waiting-queue-of in)
 	    (append (waiting-queue-of in)
-		    (id-of act)))
-      (values act evs out obj))
+		    (id-of sim)))
+      (values (list sim) evs out obj))
+
     ;; waiting for the out port to be free
-    (wait-out (act evs out obj)
-      (setf (waiting-of out) t)
-      (values act evs out obj))
+    (wait-out (sim evs out obj)
+      (setf (waiting-p-of out) t)
+      (values (list sim) evs out obj))
+
     ;; try again after a computed delay
-    (retry (act evs out obj)
-      (schedule act evs (make-instance 'event
-				       :owner-path (path act)
-				       :fn do-output
+    (retry (sim evs out obj)
+      (schedule sim evs (make-instance 'event
+				       :owner-path (path sim)
+				       :fn #'do-output
 				       :time (+ (gettime evs)
-						(retry-delay act out
-							     obj))
+						(retry-delay sim evs
+							     out obj))
 				       :args (list out obj))))
+
     ;; cancel output attempt
-    (cancel (act evs out obj)
-      (values act evs out obj))))
+    (cancel (sim evs out obj)
+      (values (list sim) evs out obj))))
 
 
-;; example of specializing method
-;(defmethod do-output ((act specialized-actor) (evs list)
+; example of specializing method
+;(defmethod do-output ((sim specialized-simulator) (evs list)
 ;		      (out out-port) (obj object))
-;; WARNING! if output attempt fails, obj must be stored inside of act
-;  (handler-bind ((error-invalid #'cancel)
-;		  (error-busy-out #'wait-out)
-;		  (error-busy-in #'wait-in))
+  ;; WARNING! if output attempt fails, obj must be stored inside of sim
+;  (handler-bind ((port-not-connected #'cancel)
+;		 (out-port-busy #'retry)
+;		 (in-port-busy #'wait))
 ;    (call-next-method)))
 
 
-
-(defmethod transition ((act actor) (evs list) (out out-port)
+(defmethod transition ((sim simulator) (evs list) (out out-port)
 		       (obj object))
   (multiple-value-bind (in connected-p)
       (i/o-connected (parent-of sim) out)
     (with-accessors ((dest owner-of)) in
-      (cond ((not connected-p) (error 'error-invalid))
-	    ((busy-p-of out) (error 'error-busy-out))
-	    ((busy-p-of in) (error 'error-busy-in))
-	    (t (the (values actor list)
-		 (schedule dest evs
-			   (make-instance 'event
-					  :owner-path (path dest)
-					  :time (gettime evs)
-					  :fn #'handle-input
-					  :args (list in obj)))))))))
+      (cond ((not connected-p)
+	     (error 'port-not-connected
+		    :sim sim :evs evs :port out :obj obj))
+	    ((busy-p-of out)
+	     (error 'out-port-busy
+		    :sim sim :evs evs :port out :obj obj))
+	    ((busy-p-of in)
+	     (error 'in-port-busy
+		    :sim sim :evs evs :port in :obj obj))
+	    (t (schedule dest obj evs
+			 (make-instance 'event
+					:owner-path (path dest)
+					:time (gettime evs)
+					:fn #'handle-input
+					:args (list in obj))))))))
 
 
-(defmethod update-component ((sim simulator) (obj object) id)
-  (declare (id-type id))
-  (assert (eql id (id-of obj)) nil "ids don't match!")
-  (setf (gethash id (components-of sim))
+(defmethod update-child ((sim simulator) (obj object))
+  (setf (gethash (id-of obj) (children-by-id-of sim))
 	(assign-path obj sim))
   sim)
 
 
-(defmethod update-component ((sim simulator) (obj null) id)
-  (declare (id-type id))
-  (multiple-value-bind (val val-p) (gethash id (components-of sim))
+(defmethod update-child ((sim simulator) (obj null))
+  (multiple-value-bind (val val-p) (gethash (id-of obj)
+					    (children-by-id-of sim))
     (declare (ignore val))
-    (assert val-p nil "cannot remove obj, not a component of sim!")
-    (remhash id (components-of sim))
+    (assert val-p nil "cannot remove obj, not a child of sim!")
+    (remhash (id-of obj) (children-by-id-of sim))
     sim))
 
 
-(defmethod components-list ((sim simulator))
+(defmethod update-children ((sim simulator) (ch list))
+  (if (null ch)
+      sim
+      (update-children (update-child sim (first ch))
+		       (rest ch))))
+
+
+(defmethod children ((sim simulator))
   (loop
      :for obj
-     :being :the :hash-values :in (components-of sim)
+     :being :the :hash-values :in (children-by-id-of sim)
      :collect obj))
 
 
 (defmethod assign-path ((obj object) (sim simulator))
   (setf (parents-path-of obj)
-	(append (parents-path-of sim)
-		(list (id-of sim))))
+	(path sim))
   obj)
 
 
@@ -347,46 +402,43 @@
 	 (owner-path-of ev)))
 
 
-(defmethod schedule ((act actor) (evs list) (ev event))
-  (values (the actor (add-event act ev))
-	  (the list (sort-events (cons ev evs)))))
+(defmethod schedule ((sim simulator) (evs list) (ev event))
+  (values (list (add-event sim ev))
+	  (sort-events (cons ev evs))))
 
 
-(defmethod add-event ((act actor) (ev event))
-  (setf (events-of act)
-	(sort-events (cons ev (events-of act))))
-  act)
+(defmethod add-event ((sim simulator) (ev event))
+  (setf (events-of sim)
+	(sort-events (cons ev (events-of sim))))
+  sim)
 
 
-(defmethod pop-event ((act actor))
-  (values act
+(defmethod pop-event ((sim simulator))
+  (values sim
 	  (the event
-	    (pop (events-of act)))))
-
-
-(defmethod evolve ((act actor) (evs list))
-  (multiple-value-bind (act ev)
-      (pop-event act)
-    (assert (eql ev (first evs)) nil "ev is not the first event!")
-    (the (values actor list)
-      (apply (fn-of ev)
-	     (append (list act (rest evs))
-		     (if (slot-boundp ev 'args)
-			 (args-of ev)))))))
+	    (pop (events-of sim)))))
 
 
 (defmethod evolve ((sim simulator) (evs list))
   (let ((next-ev (first evs)))
     (if (belongs sim next-ev)
-	(call-next-method)
-	(let ((evolving (find-if (lambda (component)
+	(multiple-value-bind (sim ev)
+	    (pop-event sim)
+	  (assert (eql ev (first evs)) nil "ev is not the first event!")
+	  (apply (fn-of ev)
+		 (append (list sim (rest evs))
+			 (when (slot-boundp ev 'args)
+			   (args-of ev)))))
+	;; else next-ev belongs to one of the children
+	(let ((evolving (find-if (lambda (child)
 				   (path-starts-with (owner-path-of next-ev)
-						     (path component)))
-				 (components-list sim))))
+						     (path child)))
+				 (children sim))))
 	  (if (null evolving)
-	      ;; next-ev's owner not found, discard it and keep going
-	      (evolve sim (rest evs))
-	      (multiple-value-bind (act evs) (evolve evolving evs)
-		(values (the simulator
-			  (update-component sim act (id-of act)))
-			evs)))))))
+	      ;; next-ev's owner not found
+	      (values (list sim) evs)
+	      ;; else evolve and return values
+	      (multiple-value-bind (new-children new-evs)
+		  (evolve evolving evs)
+		(values (update-children sim new-children)
+			new-evs)))))))
