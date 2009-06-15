@@ -298,20 +298,25 @@
 
 (defmethod do-output ((sim simulator) (evs list) (out out-port)
 		      (obj object))
-  (restart-case (progn
-		  (transition sim evs out obj)
-		  (remove-child sim obj))
+  (restart-case
+      (multiple-value-bind (new-sims new-evs)
+	  (transition sim evs out obj)
+	;; new-sims contains the destination simulator
+	(values (cons (remove-child sim obj)
+		      new-sims)
+		new-evs))
+    ;;; restarts:
     ;; waiting for the destination's in-port to be free
     (wait-in (sim evs in obj)
       (setf (waiting-queue-of in)
 	    (append (waiting-queue-of in)
 		    (id-of sim)))
-      (values (list sim) evs out obj))
+      (values (list sim) evs)
 
     ;; waiting for the out port to be free
     (wait-out (sim evs out obj)
       (setf (waiting-p-of out) t)
-      (values (list sim) evs out obj))
+      (values (list sim))
 
     ;; try again after a computed delay
     (retry (sim evs out obj)
@@ -325,7 +330,7 @@
 
     ;; cancel output attempt
     (cancel (sim evs out obj)
-      (values (list sim) evs out obj))))
+      (values (list sim) evs))))))
 
 
 ; example of specializing method
