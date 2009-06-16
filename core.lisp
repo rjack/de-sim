@@ -234,8 +234,12 @@
 
 
 (defmethod handle-input ((sim simulator) (in in-port) (obj object))
-  ;; NB: add-child
-  nil)
+  "Contract: simulator in-port object -> events
+
+   Purpose: to add object to the children of sim.
+
+   Note: specializing methods must call-next-method."
+  (add-child sim obj))
 
 
 (defmethod connect-port ((sim simulator) (out out-port) (in in-port))
