@@ -59,15 +59,41 @@
 ;; CLASSES
 
 
+(defclass object ()
+  ((id
+    :reader id-of
+    :type id-type)
+   (parent
+    :accessor parent-of)))
+
+
+(defclass simulator (object)
+  ((children-by-id
+    :initform (make-hash-table)
+    :reader children-by-id-of
+    :type hash-table)
+   (out-in-map
+    :initform (make-hash-table)
+    :reader out-in-map-of
+    :type hash-table)))
+
+
+(defclass scenario (simulator)
+  ((events
+    :accessor events-of
+    :initform (list)
+    :type list)))
+
+
 (defclass event ()
   ((id
     :reader id-of
     :type id-type)
-   (owner-path
-    :initarg :owner-path
-    :initform (error ":owner-path missing")
-    :accessor owner-path-of
-    :type list)
+   (owner
+    :initarg :owner
+    :initform (error ":owner missing")
+    :accessor owner-of
+    :type simulator)
    (time
     :initarg :time
     :initform (error ":time missing")
@@ -83,43 +109,6 @@
     ;; unbound if unused
     :accessor args-of
     :type list)))
-
-
-(defclass object ()
-  ((id
-    :reader id-of
-    :type id-type)
-   (parent
-    :accessor parent-of)
-   (parents-path
-    :accessor parents-path-of
-    :type list
-    :documentation "A list of id telling where the object is in the object tree.
-    Example: given the tree
-      sim-0
-        sim-1
-          sim-2
-          obj-3
-        obj-4
-        sim-5
-          obj-6
-    the path of obj-6 is (0 5)
-    the paths of sim-2 and obj-3 are the same (0 1)")))
-
-
-(defclass simulator (object)
-  ((children-by-id
-    :initform (make-hash-table)
-    :reader children-by-id-of
-    :type hash-table)
-   (events
-    :accessor events-of
-    :initform (list)
-    :type list)
-   (out-in-map
-    :initform (make-hash-table)
-    :reader out-in-map-of
-    :type hash-table)))
 
 
 (defclass port ()
@@ -175,10 +164,7 @@
 ;; CONDITIONS
 
 (define-condition i/o-transition-error (error)
-  ((sim :initarg :sim :reader sim-of :type simulator)
-   (evs :initarg :evs :reader evs-of :type list)
-   (port :initarg :port :reader port-of :type port)
-   (obj :initarg :obj :reader obj-of :type object)))
+  nil)
 
 
 (define-condition port-not-connected (i/o-transition-error)
@@ -240,147 +226,171 @@
 
 ;; PRINT-OBJECT
 
-(defmethod print-object ((e event) s)
-  (print-unreadable-object (e s :type t :identity t)
-    (format s "owner-path: ~a time: ~a fn: ~a"
-	    (owner-path-of e) (time-of e) (fn-of e))
-    (when (slot-boundp e 'args)
-      (format s " args: ~a" (args-of e)))))
+(defmethod print-object ((ev event) s)
+  (print-unreadable-object (ev s :type t)
+    (format s "time: ~a fn: ~a"
+	    (time-of ev) (fn-of ev))
+    (when (slot-boundp ev 'args)
+      (format s " args: ~a" (args-of ev)))
+    (format s "owner: ~a" (owner-of ev))))
 
 
 
 ;; FUNCTIONS AND METHODS
 
-
-(let ((clock 0))
-  (defun gettime (evs)
-    (if (null evs)
-	clock
-	(setf clock
-	      (time-of (first evs))))))
+(defmethod retry-delay ((sim simulator) (out out-port) (obj object))
+  0)
 
 
-(defun path-starts-with (seq test)
-  (equal (subseq seq 0 (length test))
-	 test))
+(defmethod handle-input ((sim simulator) (in in-port) (obj object))
+  ;; NB: add-child
+  nil)
 
 
-(defun sort-events (evs)
-  (stable-sort evs #'< :key #'time-of))
+(defmethod connect-port ((sim simulator) (out out-port) (in in-port))
+  "Contract: simulator out-port in-port -> simulator
 
+   Purpose: to map the out-port to the in-port in the i/o-map of sim.
 
-(defmethod i/o-connect ((sim simulator) (out out-port) (in in-port))
+   Note: sim must be the parent of the owners of out-port and in-port."
   (setf (gethash (id-of out) (out-in-map-of sim))
 	in)
   sim)
 
 
-(defmethod i/o-connected ((sim simulator) (out out-port))
-  (gethash (id-of out) (out-in-map-of sim)))
+(defmethod disconnect-port ((sim simulator) (out out-port))
+  "Contract: simulator out-port -> simulator
 
+   Purpose: to remove the out-in mapping from the sim i/o map.
 
-(defmethod i/o-disconnect ((sim simulator) (out out-port))
+   Note: sim must be the parent of the owners of out-port and in-port."
   (remhash (id-of out) (out-in-map-of sim))
   sim)
 
 
-(defmethod retry-delay ((sim simulator) (evs list) (out out-port)
-			(obj object))
-  10)
+(defmethod lock-port ((port p) (obj object))
+  "Contract: port object -> (or unlock-event nil)
+
+   Purpose: to lock the port and decide when unlock it.
+
+   Stereotype: Template Method for access-port.
+
+   Description: the default lock policy is to not lock at all.
+                Specialize this method to provide your own lock
+                policy."
+  (assert (not (busy-p-of p)) nil "Locking a locked port.")
+  nil)
 
 
-;; schedulable
-(defmethod handle-input ((sim simulator) (evs list) (in in-port)
-			 (obj object))
-  (values (list (add-child sim obj))
-	  evs))
+(defmethod unlock-port ((in-port in))
+  "TODO"
+  nil)
 
 
-(defmethod do-output ((sim simulator) (evs list) (out out-port)
-		      (obj object))
-  (restart-case
-      (multiple-value-bind (new-sims new-evs)
-	  (transition sim evs out obj)
-	;; new-sims contains the destination simulator
-	(values (cons (remove-child sim obj)
-		      new-sims)
-		new-evs))
-    ;;; restarts:
-    ;; waiting for the destination's in-port to be free
-    (wait-in (sim evs in obj)
-      (setf (waiting-queue-of in)
-	    (append (waiting-queue-of in)
-		    (id-of sim)))
-      (values (list sim) evs)
-
-    ;; waiting for the out port to be free
-    (wait-out (sim evs out obj)
-      (setf (waiting-p-of out) t)
-      (values (list sim))
-
-    ;; try again after a computed delay
-    (retry (sim evs out obj)
-      (schedule sim evs (make-instance 'event
-				       :owner-path (path sim)
-				       :fn #'do-output
-				       :time (+ (gettime evs)
-						(retry-delay sim evs
-							     out obj))
-				       :args (list out obj))))
-
-    ;; cancel output attempt
-    (cancel (sim evs out obj)
-      (values (list sim) evs))))))
+(defmethod unlock-port ((out-port out))
+  "TODO"
+  nil)
 
 
-; example of specializing method
-;(defmethod do-output ((sim specialized-simulator) (evs list)
-;		      (out out-port) (obj object))
-  ;; WARNING! if output attempt fails, obj must be stored inside of sim
-;  (handler-bind ((port-not-connected #'cancel)
-;		 (out-port-busy #'retry)
-;		 (in-port-busy #'wait))
-;    (call-next-method)))
+(defmethod access-port ((sim simulator) (out out-port) (obj object))
+  "Contract: simulator out-port object -> (or in-port nil)
+                                          (or unlock-event nil)
+
+   Purpose: to retrieve the in-port connected to out.
+
+   Stereotype: uses lock-port as Template Method.
+
+   Errors: out-port-busy
+           port-not-connected
+
+   Description: specialize lock-port to provide a lock / unlock policy
+                for the out-port."
+  (if (busy-p-of out)
+      (restart-case (error 'out-port-busy)
+	(wait ()
+	  (setf (waiting-p-of out)
+		t)
+	  (values nil nil))
+	(cancel ()
+	  (values nil nil)))
+      (multiple-value-bind (in in-p)
+	  (gethash (id-of out)
+		   (out-in-map-of (parent-of sim)))
+	(if (not in-p)
+	    (restart-case (error 'port-not-connected)
+	      (cancel ()
+		(values nil nil)))
+	    (let ((unlock-event (lock-port out obj)))
+	      (values in unlock-event))))))
 
 
-(defmethod transition ((sim simulator) (evs list) (out out-port)
-		       (obj object))
-  (multiple-value-bind (in connected-p)
-      (i/o-connected (parent-of sim) out)
-    (with-accessors ((dest owner-of)) in
-      (cond ((not connected-p)
-	     (error 'port-not-connected
-		    :sim sim :evs evs :port out :obj obj))
-	    ((busy-p-of out)
-	     (error 'out-port-busy
-		    :sim sim :evs evs :port out :obj obj))
-	    ((busy-p-of in)
-	     (error 'in-port-busy
-		    :sim sim :evs evs :port in :obj obj))
-	    (t (schedule dest obj evs
-			 (make-instance 'event
-					:owner-path (path dest)
-					:time (gettime evs)
-					:fn #'handle-input
-					:args (list in obj))))))))
+(defmethod access-port ((sim simulator) (in in-port) (obj object))
+  "Contract: simulator in-port object -> (or simulator nil)
+                                         (or unlock-event nil)
+
+   Purpose: to retrieve the owner of in-port.
+
+   Stereotype: uses lock-port as Template Method.
+
+   Errors: in-port-busy
+
+   Description: specialize lock-port to provide a lock / unlock policy
+                for the in-port."
+  (if (busy-p-of in)
+      (restart-case (error 'in-port-busy)
+	(wait ()
+	  (setf (waiting-queue-of in)
+		(append (waiting-queue-of in)
+			sim))
+	  (values nil nil))
+	(cancel ()
+	  (values nil nil)))
+      (values (the simulator (owner-of in))
+	      (the event (lock-port in obj)))))
+
+
+(defmethod output-events ((sim simulator) (out out-port) (obj object))
+  "Contract: simulator out-port object -> events
+
+   Purpose: to create a new event that will call handle-input on the
+            destination of out and the given object.
+
+   Description: specialize this method and wrap call-next-method with
+                handler-bind."
+  (multiple-value-bind (in out-unlock-event)
+      (access-port sim out)
+    (when in
+      (multiple-value-bind (dest in-unlock-event)
+	  (access-port sim in)
+	(list out-unlock-event in-unlock-event
+	      (make-instance 'event
+			     :owner dest
+			     :time (clock-of sim)
+			     :fn #'handle-input
+			     :args (list in obj))))
 
 
 (defmethod add-child ((sim simulator) (obj object))
+  "Contract: simulator object -> simulator
+
+   Purpose: to add obj into the children map of sim."
   (setf (gethash (id-of obj) (children-by-id-of sim))
-	(assign-path obj sim))
+	obj)
   sim)
 
 
 (defmethod remove-child ((sim simulator) (obj object))
-  (multiple-value-bind (val val-p) (gethash (id-of obj)
-					    (children-by-id-of sim))
-    (declare (ignore val))
-    (assert val-p nil "cannot remove obj, not a child of sim!")
-    (remhash (id-of obj) (children-by-id-of sim))
-    sim))
+  "Contract: simulator object -> simulator
+
+   Purpose: to remove obj from the children map of sim."
+  (remhash (id-of obj) (children-by-id-of sim))
+  sim)
 
 
 (defmethod add-children ((sim simulator) (ch list))
+  "Contract: simulator objects -> simulator
+
+   Purpose: to add recursively all the objects to sim."
   (if (null ch)
       sim
       (add-children (add-child sim (first ch))
@@ -388,72 +398,57 @@
 
 
 (defmethod remove-children ((sim simulator) (ch list))
+  "Contract: simulator objects -> simulator
+
+   Purpose: to remove recursively all the objects from sim."
   (if (null ch)
       sim
       (remove-children (remove-child sim (first ch))
 		       (rest ch))))
 
 
-(defmethod children ((sim simulator))
-  (loop
-     :for obj
-     :being :the :hash-values :in (children-by-id-of sim)
-     :collect obj))
+(defmethod schedule ((sce scenario) &rest events)
+  "Contract: scenario events -> scenario
+
+   Purpose: to add the given events to the scenario, keeping them
+            ordered by time."
+  (flet ((sort-events (evs)
+	   (stable-sort evs #'< :key #'time-of)))
+    (setf (events-of sce)
+	  (sort-events (append (events-of sce)
+			       events)))
+    sce))
 
 
-(defmethod assign-path ((obj object) (sim simulator))
-  (setf (parents-path-of obj)
-	(path sim))
-  obj)
+(defmethod synchronize ((sim simulator) tm)
+  "Contract: simulator time -> simulator
 
-
-(defmethod path ((obj object))
-  (append (parents-path-of obj)
-	  (list (id-of obj))))
-
-
-(defmethod belongs ((obj object) (ev event))
-  (equal (path obj)
-	 (owner-path-of ev)))
-
-
-(defmethod schedule ((sim simulator) (evs list) (ev event))
-  (values (list (add-event sim ev))
-	  (sort-events (cons ev evs))))
-
-
-(defmethod add-event ((sim simulator) (ev event))
-  (setf (events-of sim)
-	(sort-events (cons ev (events-of sim))))
+   Purpose: to synchronize sim's internal clock with the given time."
+  (declare (time-type tm))
+  (setf (clock-of sim)
+	tm)
   sim)
 
 
-(defmethod pop-event ((sim simulator))
-  (values sim
-	  (the event
-	    (pop (events-of sim)))))
+(defmethod evolve ((sim simulator) (ev event))
+  "Contract: simulator event -> events
+
+   Purpose: to apply the event to sim
+
+   Example: (evolve bell hit-event) -> ring-event vibrate-event"
+  (apply (fn-of ev)
+	 (append (list (synchronize sim (time-of ev)))
+		 (when (slot-boundp ev 'args)
+		   (args-of ev))))))
 
 
-(defmethod evolve ((sim simulator) (evs list))
-  (let ((next-ev (first evs)))
-    (if (belongs sim next-ev)
-	(multiple-value-bind (sim ev)
-	    (pop-event sim)
-	  (assert (eql ev (first evs)) nil "ev is not the first event!")
-	  (apply (fn-of ev)
-		 (append (list sim (rest evs))
-			 (when (slot-boundp ev 'args)
-			   (args-of ev)))))
-	;; else next-ev belongs to one of the children
-	(let ((evolving (find-if (lambda (child)
-				   (path-starts-with (owner-path-of next-ev)
-						     (path child)))
-				 (children sim))))
-	  (if (null evolving)
-	      ;; next-ev's owner not found
-	      (values (list sim) evs)
-	      ;; else evolve and return values
-	      (multiple-value-bind (new-children new-evs)
-		  (evolve evolving evs)
-		(values (add-children sim new-children)
-			new-evs)))))))
+(defmethod evolving ((sce scenario))
+  "Contract: scenario -> simulator event
+
+   Purpose: to return the next simulator that must execute its event.
+
+   Example: (multiple-value-call #'evolve (evolving example-scenario))"
+  (let ((ev (pop (events-of sce))))
+    (if (null ev)
+	(values nil nil)
+	(values (owner-of ev) ev))))
