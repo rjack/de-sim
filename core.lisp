@@ -27,8 +27,8 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-;(declaim (optimize debug safety (speed 0)))
-(declaim (optimize (debug 0) (safety 0) speed))
+(declaim (optimize debug safety (speed 0)))
+;(declaim (optimize (debug 0) (safety 0) speed))
 
 
 ;; OVERVIEW
@@ -231,9 +231,6 @@
 
 
 ;; FUNCTIONS AND METHODS
-
-(defmethod retry-delay ((sim simulator) (out out-port) (obj object))
-  0)
 
 
 (defmethod handle-input ((sim simulator) (in in-port) (obj object))
