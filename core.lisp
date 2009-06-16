@@ -27,8 +27,8 @@
 ;; OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-(declaim (optimize debug safety (speed 0)))
-;(declaim (optimize (debug 0) (safety 0) speed))
+;(declaim (optimize debug safety (speed 0)))
+(declaim (optimize (debug 0) (safety 0) speed))
 
 
 ;; OVERVIEW
@@ -68,7 +68,10 @@
 
 
 (defclass simulator (object)
-  ((children-by-id
+  ((clock
+    :accessor clock-of
+    :type time-type)
+   (children-by-id
     :initform (make-hash-table)
     :reader children-by-id-of
     :type hash-table)
@@ -182,25 +185,16 @@
 ;; RESTART FUNCTIONS
 
 (defun wait (c)
-  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
-		   (obj obj-of)) c
-    (cond ((typep c 'out-port-busy)
-	   (invoke-restart 'wait-out sim evs port obj))
-	  ((typep c 'in-port-busy)
-	   (invoke-restart 'wait-in sim evs port obj))
-	  (t (error "Bad condition type!")))))
-
-
-(defun retry (c)
-  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
-		   (obj obj-of)) c
-    (invoke-restart 'retry sim evs port obj)))
+  (cond ((typep c 'out-port-busy)
+	 (invoke-restart 'wait-out))
+	((typep c 'in-port-busy)
+	 (invoke-restart 'wait-in))
+	(t (error "Bad condition type!"))))
 
 
 (defun cancel (c)
-  (with-accessors ((sim sim-of) (evs evs-of) (port port-of)
-		   (obj obj-of)) c
-    (invoke-restart 'cancel sim evs port obj)))
+  (declare (ignore c))
+  (invoke-restart 'cancel))
 
 
 ;; INITIALIZE-INSTANCE
@@ -268,7 +262,7 @@
   sim)
 
 
-(defmethod lock-port ((port p) (obj object))
+(defmethod lock-port ((p port) (obj object))
   "Contract: port object -> (or unlock-event nil)
 
    Purpose: to lock the port and decide when unlock it.
@@ -282,12 +276,12 @@
   nil)
 
 
-(defmethod unlock-port ((in-port in))
+(defmethod unlock-port ((in in-port))
   "TODO"
   nil)
 
 
-(defmethod unlock-port ((out-port out))
+(defmethod unlock-port ((out out-port))
   "TODO"
   nil)
 
@@ -362,12 +356,13 @@
     (when in
       (multiple-value-bind (dest in-unlock-event)
 	  (access-port sim in)
+	(remove-child sim obj)
 	(list out-unlock-event in-unlock-event
 	      (make-instance 'event
 			     :owner dest
 			     :time (clock-of sim)
 			     :fn #'handle-input
-			     :args (list in obj))))
+			     :args (list in obj)))))))
 
 
 (defmethod add-child ((sim simulator) (obj object))
@@ -439,7 +434,7 @@
   (apply (fn-of ev)
 	 (append (list (synchronize sim (time-of ev)))
 		 (when (slot-boundp ev 'args)
-		   (args-of ev))))))
+		   (args-of ev)))))
 
 
 (defmethod evolving ((sce scenario))
