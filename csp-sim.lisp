@@ -246,6 +246,20 @@
     (format s "name: ~a" (name-of p))))
 
 
+;; VOICE LOCK POLICY
+
+(defmethod lock-port ((p person) (voice-out voice-out-port)
+		      (vo voice))
+  (call-next-method)
+  (setf (lock-of voice-out) t)
+  (list (make-instance 'event
+		       :owner p
+		       :time (+ (clock-of p)
+				(duration-of vo))
+		       :fn #'unlock-port
+		       :args (list voice-out))))
+
+
 ;; PERSON BEHAVIOUR
 
 
@@ -270,15 +284,18 @@
 			     (random-phrase))))
 
 
+(defmethod port-ready ((p person) (voice-out voice-out-port))
+  (list (make-instance 'event
+		       :owner p
+		       :time (clock-of p)
+		       :fn #'start-talking)))
+
+
 (defmethod handle-input ((p person) (in voice-in-port)
 			 (vo voice))
   (call-next-method)
-  (make-instance 'event
-		 :owner p
-		 :time (clock-of p)
-		 :fn #'output
-		 :args (list (voice-out-of p)
-			     (random-phrase))))
+  (remove-child p vo)
+  nil)
 
 
 ;; CAN BEHAVIOUR
