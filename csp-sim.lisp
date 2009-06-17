@@ -243,8 +243,12 @@
 
 (defmethod print-object ((p person) s)
   (print-unreadable-object (p s)
-    (format s "name: ~a" (name-of p))))
+    (format s "~a" (name-of p))))
 
+
+(defmethod print-object ((vo voice) s)
+  (print-unreadable-object (vo s)
+    (format s "~a (~a)" (message-of vo) (duration-of vo))))
 
 ;; VOICE LOCK POLICY
 
