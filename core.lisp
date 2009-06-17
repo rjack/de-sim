@@ -118,11 +118,16 @@
   ((id
     :reader id-of
     :type id-type)
-   (busy-p
-    :initarg :busy-p
+   (lock
+    :initarg :lock
     :initform nil
-    :accessor busy-p-of
-    :type boolean)))
+    :accessor lock-of
+    :type boolean)
+   (waiting-queue
+    :initform (list)
+    :accessor waiting-queue-of
+    :type list
+    :documentation "List of sims waiting to use this port")))
 
 
 (defclass in-port (port)
@@ -130,22 +135,11 @@
     :initarg :owner
     :initform (error ":owner missing")
     :accessor owner-of
-    :type simulator)
-   (waiting-queue
-    :initform (list)
-    :accessor waiting-queue-of
-    :type list
-    :documentation "List of ids of the actors waiting to use this
-    port")))
+    :type simulator)))
 
 
 (defclass out-port (port)
-  ((waiting-p
-    :initform nil
-    :accessor waiting-p-of
-    :type boolean
-    :documentation "True if the owner of this port is waiting in order
-    to access it.")))
+  nil)
 
 
 (defclass stream-in-port (in-port)
@@ -300,11 +294,12 @@
 
    Description: specialize lock-port to provide a lock / unlock policy
                 for the out-port."
-  (if (busy-p-of out)
+  (if (lock-of out)
       (restart-case (error 'out-port-busy)
 	(wait ()
-	  (setf (waiting-p-of out)
-		t)
+	  (setf (waiting-queue-of out)
+		(append (waiting-queue-of out)
+			sim))
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
@@ -331,7 +326,7 @@
 
    Description: specialize lock-port to provide a lock / unlock policy
                 for the in-port."
-  (if (busy-p-of in)
+  (if (lock-of in)
       (restart-case (error 'in-port-busy)
 	(wait ()
 	  (setf (waiting-queue-of in)
