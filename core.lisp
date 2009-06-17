@@ -264,8 +264,8 @@
   sim)
 
 
-(defmethod lock-port ((p port) (obj object))
-  "Contract: port object -> events
+(defmethod lock-port ((sim simulator) (p port) (obj object))
+  "Contract: simulator port object -> events
 
    Purpose: to lock the port and decide when unlock it.
 
@@ -327,7 +327,7 @@
 	(wait ()
 	  (setf (waiting-queue-of out)
 		(append (waiting-queue-of out)
-			sim))
+			(list sim)))
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
@@ -339,7 +339,7 @@
 	      (cancel ()
 		(values nil nil)))
 	    (values (the in-port in)
-		    (lock-port out obj))))))
+		    (lock-port sim out obj))))))
 
 
 (defmethod access-port ((sim simulator) (in in-port) (obj object))
@@ -359,12 +359,12 @@
 	(wait ()
 	  (setf (waiting-queue-of in)
 		(append (waiting-queue-of in)
-			sim))
+			(list sim)))
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
       (values (the simulator (owner-of in))
-	      (the list (lock-port in obj)))))
+	      (the list (lock-port sim in obj)))))
 
 
 (defmethod output ((sim simulator) (out out-port) (obj object))
