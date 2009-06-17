@@ -273,14 +273,33 @@
   nil)
 
 
-(defmethod unlock-port ((in in-port))
-  "TODO"
-  nil)
+(defmethod unlock-port ((sim simulator) (in in-port))
+  "Contract: out-port -> events"
+  (assert (lock-of in) nil "Unlocking a not locked port!")
+  (setf (lock-of in) nil)
+  (let ((waiting (pop (waiting-queue-of in))))
+    (when waiting
+      (list (make-instance 'event
+			   :owner waiting
+			   :time (clock-of sim)
+			   :fn #'port-ready
+			   :args (list in))))))
 
 
-(defmethod unlock-port ((out out-port))
-  "TODO"
-  nil)
+(defmethod unlock-port ((sim simulator) (out out-port))
+  "Contract: out-port -> events"
+  (assert (lock-of out) nil "Unlocking a not locked port!")
+  (setf (lock-of out) nil)
+  (list (make-instance 'event
+		       :owner sim
+		       :time (clock-of sim)
+		       :fn #'port-ready
+		       :args (list out))))
+
+
+(defmethod port-ready ((sim simulator) (p port))
+  "Contract: simulator port -> events"
+  (error "specialize me!"))
 
 
 (defmethod access-port ((sim simulator) (out out-port) (obj object))
