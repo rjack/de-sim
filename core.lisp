@@ -35,7 +35,30 @@
 
 ;; TODO
 
-
+(defpackage :org.altervista.rjack.de-sim
+  (:nicknames :de-sim)
+  (:use :common-lisp)
+  (:export :id-type :time-type
+	   :object :id :id-of :parent :parent-of
+	   :simulator :clock :clock-of
+	   :scenario
+	   :event :owner-of :time-of :fn-of :args-of
+	   :port :lock-of :waiting-queue-of
+	   :in-port :out-port
+	   :i/o-transition-error
+	   :port-not-connected
+	   :out-port-busy
+	   :in-port-busy
+	   :wait :cancel
+	   :handle-input
+	   :connect-port :disconnect-port
+	   :lock-port :unlock-port
+	   :port-ready :access-port
+	   :output
+	   :add-child :remove-child :add-children :remove-children
+	   :schedule
+	   :evolving
+	   :evolve))
 (in-package :de-sim)
 
 
@@ -104,7 +127,7 @@
     :type time-type)
    (fn
     :initarg :fn
-    :initform (error ":action missing")
+    :initform (error ":fn missing")
     :accessor fn-of
     :type function)
    (args
@@ -140,22 +163,6 @@
 
 (defclass out-port (port)
   nil)
-
-
-(defclass stream-in-port (in-port)
-  ((stream
-    :initarg :input-stream
-    :initform *query-io*
-    :reader stream-of
-    :type stream)))
-
-
-(defclass stream-out-port (out-port)
-  ((stream
-    :initarg :output-stream
-    :initform *query-io*
-    :reader stream-of
-    :type stream)))
 
 
 ;; CONDITIONS
@@ -258,7 +265,7 @@
 
 
 (defmethod lock-port ((p port) (obj object))
-  "Contract: port object -> (or event nil)
+  "Contract: port object -> events
 
    Purpose: to lock the port and decide when unlock it.
 
@@ -304,7 +311,7 @@
 
 (defmethod access-port ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> (or in-port nil)
-                                          (or event nil)
+                                          events
 
    Purpose: to retrieve the in-port connected to out.
 
@@ -331,13 +338,13 @@
 	    (restart-case (error 'port-not-connected)
 	      (cancel ()
 		(values nil nil)))
-	    (let ((unlock-event (lock-port out obj)))
-	      (values in unlock-event))))))
+	    (values (the in-port in)
+		    (lock-port out obj))))))
 
 
 (defmethod access-port ((sim simulator) (in in-port) (obj object))
   "Contract: simulator in-port object -> (or simulator nil)
-                                         (or event nil)
+                                         events
 
    Purpose: to retrieve the owner of in-port.
 
@@ -357,7 +364,7 @@
 	(cancel ()
 	  (values nil nil)))
       (values (the simulator (owner-of in))
-	      (the event (lock-port in obj)))))
+	      (the list (lock-port in obj)))))
 
 
 (defmethod output ((sim simulator) (out out-port) (obj object))
@@ -368,26 +375,28 @@
 
    Description: specialize this method and wrap call-next-method with
                 handler-bind."
-  (multiple-value-bind (in out-unlock-event)
-      (access-port sim out)
+  (multiple-value-bind (in out-events)
+      (access-port sim out obj)
     (when in
-      (multiple-value-bind (dest in-unlock-event)
-	  (access-port sim in)
+      (multiple-value-bind (dest in-events)
+	  (access-port sim in obj)
 	(remove-child sim obj)
-	(list out-unlock-event in-unlock-event
-	      (make-instance 'event
+	(cons (make-instance 'event
 			     :owner dest
 			     :time (clock-of sim)
 			     :fn #'handle-input
-			     :args (list in obj)))))))
+			     :args (list in obj))
+	      (append out-events in-events))))))
 
 
 (defmethod add-child ((sim simulator) (obj object))
   "Contract: simulator object -> simulator
 
-   Purpose: to add obj into the children map of sim."
+   Purpose: to add obj into the children map of sim and to set sim as
+            parent of obj."
   (setf (gethash (id-of obj) (children-by-id-of sim))
 	obj)
+  (setf (parent-of obj) sim)
   sim)
 
 
@@ -419,7 +428,7 @@
 		       (rest ch))))
 
 
-(defmethod schedule ((sce scenario) &rest events)
+(defmethod schedule ((sce scenario) (events list))
   "Contract: scenario events -> scenario
 
    Purpose: to add the given events to the scenario, keeping them
@@ -448,10 +457,13 @@
    Purpose: to apply the event to sim
 
    Example: (evolve bell hit-event) -> ring-event vibrate-event"
-  (apply (fn-of ev)
-	 (append (list (synchronize sim (time-of ev)))
-		 (when (slot-boundp ev 'args)
-		   (args-of ev)))))
+  (let ((res (apply (fn-of ev)
+		    (append (list (synchronize sim (time-of ev)))
+			    (when (slot-boundp ev 'args)
+			      (args-of ev))))))
+    (if (listp res)
+	res
+	(list res))))
 
 
 (defmethod evolving ((sce scenario))
