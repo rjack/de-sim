@@ -258,7 +258,7 @@
 
 
 (defmethod lock-port ((p port) (obj object))
-  "Contract: port object -> (or unlock-event nil)
+  "Contract: port object -> (or event nil)
 
    Purpose: to lock the port and decide when unlock it.
 
@@ -266,8 +266,10 @@
 
    Description: the default lock policy is to not lock at all.
                 Specialize this method to provide your own lock
-                policy."
-  (assert (not (busy-p-of p)) nil "Locking a locked port.")
+                policy. A timed lock must return the event that will
+                unlock the port."
+  (assert (not (lock-of p)) nil "Locking a locked port.")
+  ;; do nothing
   nil)
 
 
@@ -283,7 +285,7 @@
 
 (defmethod access-port ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> (or in-port nil)
-                                          (or unlock-event nil)
+                                          (or event nil)
 
    Purpose: to retrieve the in-port connected to out.
 
@@ -316,7 +318,7 @@
 
 (defmethod access-port ((sim simulator) (in in-port) (obj object))
   "Contract: simulator in-port object -> (or simulator nil)
-                                         (or unlock-event nil)
+                                         (or event nil)
 
    Purpose: to retrieve the owner of in-port.
 
@@ -339,7 +341,7 @@
 	      (the event (lock-port in obj)))))
 
 
-(defmethod output-events ((sim simulator) (out out-port) (obj object))
+(defmethod output ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> events
 
    Purpose: to create a new event that will call handle-input on the
