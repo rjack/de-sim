@@ -250,7 +250,10 @@
   (print-unreadable-object (vo s)
     (format s "~a (~a)" (message-of vo) (duration-of vo))))
 
-;; VOICE LOCK POLICY
+
+
+;; PERSON BEHAVIOUR
+
 
 (defmethod lock-port ((p person) (voice-out voice-out-port)
 		      (vo voice))
@@ -263,14 +266,11 @@
 		       :args (list voice-out))))
 
 
-;; PERSON BEHAVIOUR
-
-
 (let ((phrases (list "Uh?" "Hello!" "Yes" "Really?" "No"
 		     "Did you say something?"
 		     "Please go away" "I'm calling the police"
 		     "I love you!" "Do you love me?" "I hate you!"
-		     "Just shut up.")))
+		     "Just shut up")))
 
   (defun random-phrase ()
     (make-instance 'voice
