@@ -264,6 +264,10 @@
   sim)
 
 
+(defmethod lock-port :before ((sim simulator) (p port) (obj object))
+  (assert (not (lock-of p)) nil "Locking a locked port."))
+
+
 (defmethod lock-port ((sim simulator) (p port) (obj object))
   "Contract: simulator port object -> events
 
@@ -275,7 +279,6 @@
                 unlock.
                 Specialize this method to provide your own lock
                 policy."
-  (assert (not (lock-of p)) nil "Locking a locked port.")
   (setf (lock-of p) t)
   (list (make-instance 'event
 		       :owner sim
@@ -284,9 +287,12 @@
 		       :args (list p))))
 
 
+(defmethod unlock-port :before ((sim simulator) (p port))
+  (assert (lock-of p) nil "Unlocking a not locked port!"))
+
+
 (defmethod unlock-port ((sim simulator) (in in-port))
   "Contract: out-port -> events"
-  (assert (lock-of in) nil "Unlocking a not locked port!")
   (setf (lock-of in) nil)
   (let ((waiting (pop (waiting-queue-of in))))
     (when waiting
@@ -299,7 +305,6 @@
 
 (defmethod unlock-port ((sim simulator) (out out-port))
   "Contract: out-port -> events"
-  (assert (lock-of out) nil "Unlocking a not locked port!")
   (setf (lock-of out) nil)
   (list (make-instance 'event
 		       :owner sim
