@@ -271,13 +271,17 @@
 
    Stereotype: Template Method for access-port.
 
-   Description: the default lock policy is to not lock at all.
+   Description: the default lock policy is to lock and immediately
+                unlock.
                 Specialize this method to provide your own lock
-                policy. A timed lock must return the event that will
-                unlock the port."
+                policy."
   (assert (not (lock-of p)) nil "Locking a locked port.")
-  ;; do nothing
-  nil)
+  (setf (lock-of p) t)
+  (list (make-instance 'event
+		       :owner sim
+		       :time (clock-of sim)
+		       :fn #'unlock-port
+		       :args (list p))))
 
 
 (defmethod unlock-port ((sim simulator) (in in-port))
