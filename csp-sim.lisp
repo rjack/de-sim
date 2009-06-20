@@ -254,7 +254,6 @@
 
 (defmethod lock-port ((p person) (voice-out voice-out-port)
 		      (vo voice))
-  (call-next-method)
   (setf (lock-of voice-out) t)
   (list (make-instance 'event
 		       :owner p
