@@ -112,7 +112,11 @@
 
 
 (defclass event ()
-  ((id
+  ((canceled-p
+    :initform nil
+    :accessor canceled-p-of
+    :type boolean)
+   (id
     :reader id-of
     :type id-type)
    (owner
@@ -449,6 +453,14 @@
     sce))
 
 
+(defmethod cancel-event ((ev event))
+  "Contract: event -> nil
+
+   Purpose: to set the canceled flag of ev by side effect."
+  (setf (canceled-p-of ev) t)
+  nil)
+
+
 (defmethod synchronize ((sim simulator) tm)
   "Contract: simulator time -> simulator
 
@@ -481,6 +493,6 @@
 
    Example: (multiple-value-call #'evolve (evolving example-scenario))"
   (let ((ev (pop (events-of sce))))
-    (if (null ev)
-	(values nil nil)
-	(values (owner-of ev) ev))))
+    (cond ((null ev) (values nil nil))
+	  ((canceled-p-of ev) (evolving sce))
+	  (t (values (owner-of ev) ev)))))
