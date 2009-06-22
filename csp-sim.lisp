@@ -114,7 +114,10 @@
     :type voice-in-port)
    (voice-out
     :accessor voice-out-of
-    :type voice-out-port)))
+    :type voice-out-port)
+   (reply-timeout
+    :accessor reply-timeout-of
+    :type event)))
 
 
 (defclass can (simulator)
@@ -257,7 +260,6 @@
 
 (defmethod lock-port ((p person) (voice-out voice-out-port)
 		      (vo voice))
-  (setf (lock-of voice-out) t)
   (list (make-instance 'event
 		       :owner p
 		       :time (+ (clock-of p)
@@ -278,26 +280,41 @@
 				 phrases))))
 
 
+(defmethod output ((p person) (voice-out voice-out-port) (vo voice))
+  (let ((timeout-event (make-instance 'event
+				      :owner p
+				      :time (+ 100
+					       (clock-of p))
+				      :fn #'reply-timeout)))
+    (setf (reply-timeout-of p)
+	  timeout-event)
+    (handler-bind ((port-not-connected #'abort)
+		   (out-port-busy #'wait)
+		   (in-port-busy #'abort))
+      (cons timeout-event (call-next-method)))))
+
+
+(defmethod reply-timeout ((p person))
+  (error "NO REPLY! AAAAAAARGH!"))
+
+
 (defmethod start-talking ((p person))
-  (make-instance 'event
-		 :owner p
-		 :time (clock-of p)
-		 :fn #'output
-		 :args (list (voice-out-of p)
-			     (random-phrase))))
-
-
-(defmethod port-ready ((p person) (voice-out voice-out-port))
+  "When a person starts talking, expects a reply in a given time.
+   If he/she gets no reply in that time, bad things will happen!"
   (list (make-instance 'event
 		       :owner p
 		       :time (clock-of p)
-		       :fn #'start-talking)))
+		       :fn #'output
+		       :args (list (voice-out-of p)
+				   (random-phrase)))))
 
 
 (defmethod handle-input ((p person) (in voice-in-port)
 			 (vo voice))
   (call-next-method)
   (remove-child p vo)
+  (when (slot-boundp p 'reply-timeout)
+    (de-sim::cancel-event (reply-timeout-of p)))
   nil)
 
 
@@ -364,3 +381,13 @@
 		 :a-can (make-instance 'can)
 		 :b-can (make-instance 'can)
 		 :wire (make-instance 'wire)))
+
+
+(defparameter *csp* (fresh-csp))
+
+(defparameter *events* nil)
+
+(schedule *csp* (list (make-instance 'event
+				     :time 0
+				     :owner (alice-of *csp*)
+				     :fn #'start-talking)))
