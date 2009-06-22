@@ -317,8 +317,11 @@
 
 
 (defmethod port-ready ((sim simulator) (p port))
-  "Contract: simulator port -> events"
-  (error "specialize me!"))
+  "Contract: simulator port -> events
+
+   Description: specialize this method to generate events when p gets
+                unlocked."
+  nil)
 
 
 (defmethod access-port ((sim simulator) (out out-port) (obj object))
