@@ -97,10 +97,6 @@
    (children-by-id
     :initform (make-hash-table)
     :reader children-by-id-of
-    :type hash-table)
-   (out-in-map
-    :initform (make-hash-table)
-    :reader out-in-map-of
     :type hash-table)))
 
 
@@ -145,6 +141,13 @@
   ((id
     :reader id-of
     :type id-type)
+   (peer-port
+    :accessor peer-port-of)
+   (owner
+    :initarg :owner
+    :initform (error ":owner missing")
+    :accessor owner-of
+    :type simulator)
    (lock
     :initarg :lock
     :initform nil
@@ -158,11 +161,7 @@
 
 
 (defclass in-port (port)
-  ((owner
-    :initarg :owner
-    :initform (error ":owner missing")
-    :accessor owner-of
-    :type simulator)))
+  nil)
 
 
 (defclass out-port (port)
@@ -247,25 +246,18 @@
   (add-child sim obj))
 
 
-(defmethod connect-port ((sim simulator) (out out-port) (in in-port))
-  "Contract: simulator out-port in-port -> simulator
-
-   Purpose: to map the out-port to the in-port in the i/o-map of sim.
-
-   Note: sim must be the parent of the owners of out-port and in-port."
-  (setf (gethash (id-of out) (out-in-map-of sim))
-	in)
-  sim)
+(defmethod connect-port ((out out-port) (in in-port))
+  "Contract: simulator out-port in-port -> nil"
+  (setf (peer-port-of out) in)
+  (setf (peer-port-of in) out)
+  nil)
 
 
-(defmethod disconnect-port ((sim simulator) (out out-port))
-  "Contract: simulator out-port -> simulator
-
-   Purpose: to remove the out-in mapping from the sim i/o map.
-
-   Note: sim must be the parent of the owners of out-port and in-port."
-  (remhash (id-of out) (out-in-map-of sim))
-  sim)
+(defmethod disconnect-port ((p port))
+  "Contract: out-port -> nil"
+  (slot-unbound 'port (owner-of (peer-port-of p)) 'peer-port)
+  (slot-unbound 'port p 'peer-port)
+  nil)
 
 
 (defmethod lock-port :before ((sim simulator) (p port) (obj object))
@@ -303,10 +295,8 @@
       (list (make-instance 'event
 			   :owner waiting
 			   :time (clock-of sim)
-			   :fn #'port-ready
-			   ;; FIXME! port ready should not give the
-			   ;; in-port to the sender!
-			   :args (list in))))))
+			   :fn #'in-port-ready
+			   :args (list (peer-port-of in)))))))
 
 
 (defmethod unlock-port ((sim simulator) (out out-port))
@@ -314,15 +304,23 @@
   (list (make-instance 'event
 		       :owner sim
 		       :time (clock-of sim)
-		       :fn #'port-ready
+		       :fn #'out-port-ready
 		       :args (list out))))
 
 
-(defmethod port-ready ((sim simulator) (p port))
+(defmethod in-port-ready ((sim simulator) (out out-port))
   "Contract: simulator port -> events
 
-   Description: specialize this method to generate events when p gets
-                unlocked."
+   Description: specialize this method to generate events when the
+                port connected to out gets unlocked."
+  nil)
+
+
+(defmethod out-port-ready ((sim simulator) (out out-port))
+  "Contract: simulator port -> events
+
+   Description: specialize this method to generate events when out
+                gets unlocked."
   nil)
 
 
@@ -348,15 +346,12 @@
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
-      (multiple-value-bind (in in-p)
-	  (gethash (id-of out)
-		   (out-in-map-of (parent-of sim)))
-	(if (not in-p)
-	    (restart-case (error 'port-not-connected)
-	      (cancel ()
-		(values nil nil)))
-	    (values (the in-port in)
-		    (lock-port sim out obj))))))
+      (if (slot-boundp out 'peer-port)
+	  (values (the in-port (peer-port-of out))
+		  (lock-port sim out obj))
+	  (restart-case (error 'port-not-connected)
+	    (cancel ()
+	      (values nil nil))))))
 
 
 (defmethod access-port ((sim simulator) (in in-port) (obj object))
