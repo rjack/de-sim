@@ -190,24 +190,24 @@
   (with-accessors ((voi< voice-in-of) (voi> voice-out-of)
 		   (vib< vibration-in-of) (vib> vibration-out-of)) c
     (setf voi< (make-instance 'voice-in-port :owner c))
-    (setf voi> (make-instance 'voice-out-port))
+    (setf voi> (make-instance 'voice-out-port :owner c))
     (setf vib< (make-instance 'vibration-in-port :owner c))
-    (setf vib> (make-instance 'vibration-out-port))))
+    (setf vib> (make-instance 'vibration-out-port :owner c))))
 
 
 (defmethod initialize-instance :after ((w wire) &key)
   (with-accessors ((a< a-vibration-in-of) (a> a-vibration-out-of)
 		   (b< b-vibration-in-of) (b> b-vibration-out-of)) w
     (setf a< (make-instance 'vibration-in-port :owner w))
-    (setf a> (make-instance 'vibration-out-port))
+    (setf a> (make-instance 'vibration-out-port :owner w))
     (setf b< (make-instance 'vibration-in-port :owner w))
-    (setf b> (make-instance 'vibration-out-port))))
+    (setf b> (make-instance 'vibration-out-port :owner w))))
 
 
 (defmethod initialize-instance :after ((p person) &key)
   (with-accessors ((voi< voice-in-of) (voi> voice-out-of)) p
     (setf voi< (make-instance 'voice-in-port :owner p))
-    (setf voi> (make-instance 'voice-out-port))))
+    (setf voi> (make-instance 'voice-out-port :owner p))))
 
 
 (defmethod initialize-instance :after ((csp csp) &key)
@@ -216,21 +216,21 @@
 		   (wire wire-of)) csp
     (add-children csp (list alice bob a-can b-can wire))
     ;; alice --voice--> a-can
-    (connect-port csp (voice-out-of alice) (voice-in-of a-can))
+    (connect-port (voice-out-of alice) (voice-in-of a-can))
     ;; a-can --voice--> alice
-    (connect-port csp (voice-out-of a-can) (voice-in-of alice))
+    (connect-port (voice-out-of a-can) (voice-in-of alice))
     ;; bob --voice--> b-can
-    (connect-port csp (voice-out-of bob) (voice-in-of b-can))
+    (connect-port (voice-out-of bob) (voice-in-of b-can))
     ;; b-can --voice--> bob
-    (connect-port csp (voice-out-of b-can) (voice-in-of bob))
+    (connect-port (voice-out-of b-can) (voice-in-of bob))
     ;; a-can --vibration--> wire
-    (connect-port csp (vibration-out-of a-can) (a-vibration-in-of wire))
+    (connect-port (vibration-out-of a-can) (a-vibration-in-of wire))
     ;; wire --vibration--> a-can
-    (connect-port csp (a-vibration-out-of wire) (vibration-in-of a-can))
+    (connect-port (a-vibration-out-of wire) (vibration-in-of a-can))
     ;; b-can --vibration--> wire
-    (connect-port csp (vibration-out-of b-can) (b-vibration-in-of wire))
+    (connect-port (vibration-out-of b-can) (b-vibration-in-of wire))
     ;; wire --vibration--> b-can
-    (connect-port csp (b-vibration-out-of wire) (vibration-in-of b-can))))
+    (connect-port (b-vibration-out-of wire) (vibration-in-of b-can))))
 
 
 (defun vibration->voice (vi)
