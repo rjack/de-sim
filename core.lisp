@@ -304,6 +304,8 @@
 			   :owner waiting
 			   :time (clock-of sim)
 			   :fn #'port-ready
+			   ;; FIXME! port ready should not give the
+			   ;; in-port to the sender!
 			   :args (list in))))))
 
 
