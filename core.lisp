@@ -402,7 +402,6 @@
     (when in
       (multiple-value-bind (dest in-events)
 	  (access-port sim in obj)
-	(remove-child sim obj)
 	(cons (make-instance 'event
 			     :owner dest
 			     :time (clock-of sim)
