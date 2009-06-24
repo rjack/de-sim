@@ -50,6 +50,7 @@
 	   :out-port-busy
 	   :in-port-busy
 	   :wait :cancel
+	   :obj=
 	   :handle-input
 	   :connect-port :disconnect-port
 	   :lock-port :unlock-port
@@ -235,6 +236,14 @@
 
 
 ;; FUNCTIONS AND METHODS
+
+
+(defmethod obj= ((a object) (b object))
+  "Contract: object object -> boolean
+
+   Purpose: to test for equality."
+  (eql (id-of a)
+       (id-of b)))
 
 
 (defmethod handle-input ((sim simulator) (in in-port) (obj object))
