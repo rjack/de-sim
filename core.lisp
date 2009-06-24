@@ -58,6 +58,7 @@
 	   :output
 	   :add-child :remove-child :add-children :remove-children
 	   :schedule
+	   :cancel-event
 	   :evolving
 	   :evolve))
 (in-package :de-sim)
