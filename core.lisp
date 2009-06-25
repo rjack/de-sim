@@ -56,6 +56,7 @@
 	   :lock-port :unlock-port
 	   :port-ready :access-port
 	   :output
+	   :leaving
 	   :add-child :remove-child :add-children :remove-children
 	   :schedule
 	   :cancel-event
@@ -402,7 +403,8 @@
     (when in
       (multiple-value-bind (dest in-events)
 	  (access-port sim in obj)
-	(remove-child sim obj)
+	(leaving (remove-child sim obj)
+		 out obj)
 	(cons (make-instance 'event
 			     :owner dest
 			     :time (clock-of sim)
@@ -428,6 +430,14 @@
    Purpose: to remove obj from the children map of sim."
   (remhash (id-of obj) (children-by-id-of sim))
   sim)
+
+
+(defmethod leaving ((sim simulator) (out out-port) (obj object))
+  "Contract: simulator out-port object -> simulator
+
+   Purpose: to provide a hook to process an object leaving the
+            simulator through out."
+  (error "specialize me!"))
 
 
 (defmethod add-children ((sim simulator) (ch list))
