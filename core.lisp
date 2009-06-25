@@ -54,7 +54,7 @@
 	   :handle-input
 	   :connect-port :disconnect-port
 	   :lock-port :unlock-port
-	   :port-ready :access-port
+	   :in-port-ready :out-port-ready :access-port
 	   :output
 	   :leaving
 	   :add-child :remove-child :add-children :remove-children
