@@ -68,7 +68,30 @@
 
 ;; GENERICS
 
-;;TODO
+(defgeneric obj= (object object))
+(defgeneric handle-input (simulator in-port object))
+(defgeneric connect-port (out-port in-port))
+(defgeneric disconnect-port (port))
+(defgeneric lock-port (simulator port object))
+(defgeneric lock-port (simulator port object))
+(defgeneric unlock-port (simulator port))
+(defgeneric unlock-port (simulator in-port))
+(defgeneric unlock-port (simulator out-port))
+(defgeneric in-port-ready (simulator out-port))
+(defgeneric out-port-ready (simulator out-port))
+(defgeneric access-port (simulator out-port object))
+(defgeneric access-port (simulator in-port object))
+(defgeneric output (simulator out-port object))
+(defgeneric add-child (simulator object))
+(defgeneric remove-child (simulator object))
+(defgeneric leaving (simulator out-port object))
+(defgeneric add-children (simulator children))
+(defgeneric remove-children (simulator children))
+(defgeneric schedule (scenario events))
+(defgeneric cancel-event (event))
+(defgeneric synchronize (simulator tm))
+(defgeneric evolve (simulator event))
+(defgeneric evolving (scenario))
 
 
 ;; TYPES
