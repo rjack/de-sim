@@ -55,7 +55,7 @@
 	   :connect-port :disconnect-port
 	   :lock-port :unlock-port
 	   :in-port-ready :out-port-ready :access-port
-	   :output
+	   :output :post-output
 	   :leaving
 	   :add-child :remove-child :add-children :remove-children
 	   :schedule
@@ -82,6 +82,7 @@
 (defgeneric access-port (simulator out-port object))
 (defgeneric access-port (simulator in-port object))
 (defgeneric output (simulator out-port object))
+(defgeneric post-output (simulator out-port object))
 (defgeneric add-child (simulator object))
 (defgeneric remove-child (simulator object))
 (defgeneric leaving (simulator out-port object))
@@ -294,11 +295,6 @@
   nil)
 
 
-(defmethod lock-port :before ((sim simulator) (p port) (obj object))
-  (assert (not (lock-of p)) nil "Locking a locked port.")
-  (setf (lock-of p) t))
-
-
 (defmethod lock-port ((sim simulator) (p port) (obj object))
   "Contract: simulator port object -> events
 
@@ -306,15 +302,11 @@
 
    Stereotype: Template Method for access-port.
 
-   Description: the default lock policy is to lock and immediately
-                unlock.
+   Description: the default lock policy is to not lock.
                 Specialize this method to provide your own lock
                 policy."
-  (list (make-instance 'event
-		       :owner sim
-		       :time (clock-of sim)
-		       :fn #'unlock-port
-		       :args (list p))))
+  (assert (not (lock-of p)) nil "Locking a locked port.")
+  nil)
 
 
 (defmethod unlock-port :before ((sim simulator) (p port))
@@ -433,7 +425,16 @@
 			     :time (clock-of sim)
 			     :fn #'handle-input
 			     :args (list in obj))
-	      (append out-events in-events))))))
+	      (nconc out-events
+		     in-events
+		     (post-output sim out obj)))))))
+
+
+(defmethod post-output ((sim simulator) (out out-port) (obj object))
+  "Contract: simulator out-port object -> events
+
+   Purpose: post output hook."
+  (error "Specialize me!"))
 
 
 (defmethod add-child ((sim simulator) (obj object))
