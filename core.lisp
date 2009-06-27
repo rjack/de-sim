@@ -51,12 +51,11 @@
 	   :in-port-busy
 	   :wait :cancel
 	   :obj=
-	   :handle-input
+	   :input-evs
 	   :connect-port :disconnect-port
-	   :lock-port :unlock-port
-	   :in-port-ready :out-port-ready :access-port
-	   :output :post-output
-	   :leaving
+	   :lock-evs :unlock-evs
+	   :in-ready-evs :out-ready-evs :access-port
+	   :output-evs :post-output-evs
 	   :add-child :remove-child :add-children :remove-children
 	   :schedule
 	   :cancel-event
@@ -69,23 +68,19 @@
 ;; GENERICS
 
 (defgeneric obj= (object object))
-(defgeneric handle-input (simulator in-port object))
+(defgeneric input-evs (simulator in-port object))
 (defgeneric connect-port (out-port in-port))
 (defgeneric disconnect-port (port))
-(defgeneric lock-port (simulator port object))
-(defgeneric lock-port (simulator port object))
-(defgeneric unlock-port (simulator port))
-(defgeneric unlock-port (simulator in-port))
-(defgeneric unlock-port (simulator out-port))
-(defgeneric in-port-ready (simulator out-port))
-(defgeneric out-port-ready (simulator out-port))
+(defgeneric lock-evs (simulator port object))
+(defgeneric unlock-evs (simulator port))
+(defgeneric in-ready-evs (simulator out-port))
+(defgeneric out-ready-evs (simulator out-port))
 (defgeneric access-port (simulator out-port object))
 (defgeneric access-port (simulator in-port object))
-(defgeneric output (simulator out-port object))
-(defgeneric post-output (simulator out-port object))
+(defgeneric output-evs (simulator out-port object))
+(defgeneric post-output-evs (simulator out-port object))
 (defgeneric add-child (simulator object))
 (defgeneric remove-child (simulator object))
-(defgeneric leaving (simulator out-port object))
 (defgeneric add-children (simulator children))
 (defgeneric remove-children (simulator children))
 (defgeneric schedule (scenario events))
@@ -272,7 +267,7 @@
        (id-of b)))
 
 
-(defmethod handle-input ((sim simulator) (in in-port) (obj object))
+(defmethod input-evs ((sim simulator) (in in-port) (obj object))
   "Contract: simulator in-port object -> events
 
    Purpose: to add object to the children of sim.
@@ -295,7 +290,7 @@
   nil)
 
 
-(defmethod lock-port ((sim simulator) (p port) (obj object))
+(defmethod lock-evs ((sim simulator) (p port) (obj object))
   "Contract: simulator port object -> events
 
    Purpose: to lock the port and decide when unlock it.
@@ -309,32 +304,32 @@
   nil)
 
 
-(defmethod unlock-port :before ((sim simulator) (p port))
+(defmethod unlock-evs :before ((sim simulator) (p port))
   (assert (lock-of p) nil "Unlocking a not locked port!")
   (setf (lock-of p) nil))
 
 
-(defmethod unlock-port ((sim simulator) (in in-port))
+(defmethod unlock-evs ((sim simulator) (in in-port))
   "Contract: out-port -> events"
   (let ((waiting (pop (waiting-queue-of in))))
     (when waiting
       (list (make-instance 'event
 			   :owner waiting
 			   :time (clock-of sim)
-			   :fn #'in-port-ready
+			   :fn #'in-ready-evs
 			   :args (list (peer-port-of in)))))))
 
 
-(defmethod unlock-port ((sim simulator) (out out-port))
+(defmethod unlock-evs ((sim simulator) (out out-port))
   "Contract: out-port -> events"
   (list (make-instance 'event
 		       :owner sim
 		       :time (clock-of sim)
-		       :fn #'out-port-ready
+		       :fn #'out-ready-evs
 		       :args (list out))))
 
 
-(defmethod in-port-ready ((sim simulator) (out out-port))
+(defmethod in-ready-evs ((sim simulator) (out out-port))
   "Contract: simulator port -> events
 
    Description: specialize this method to generate events when the
@@ -342,7 +337,7 @@
   nil)
 
 
-(defmethod out-port-ready ((sim simulator) (out out-port))
+(defmethod out-ready-evs ((sim simulator) (out out-port))
   "Contract: simulator port -> events
 
    Description: specialize this method to generate events when out
@@ -356,12 +351,12 @@
 
    Purpose: to retrieve the in-port connected to out.
 
-   Stereotype: uses lock-port as Template Method.
+   Stereotype: uses lock-evs as Template Method.
 
    Errors: out-port-busy
            port-not-connected
 
-   Description: specialize lock-port to provide a lock / unlock policy
+   Description: specialize lock-evs to provide a lock / unlock policy
                 for the out-port."
   (if (lock-of out)
       (restart-case (error 'out-port-busy)
@@ -374,7 +369,7 @@
 	  (values nil nil)))
       (if (slot-boundp out 'peer-port)
 	  (values (the in-port (peer-port-of out))
-		  (lock-port sim out obj))
+		  (lock-evs sim out obj))
 	  (restart-case (error 'port-not-connected)
 	    (cancel ()
 	      (values nil nil))))))
@@ -386,11 +381,11 @@
 
    Purpose: to retrieve the owner of in-port.
 
-   Stereotype: uses lock-port as Template Method.
+   Stereotype: uses lock-evs as Template Method.
 
    Errors: in-port-busy
 
-   Description: specialize lock-port to provide a lock / unlock policy
+   Description: specialize lock-evs to provide a lock / unlock policy
                 for the in-port."
   (if (lock-of in)
       (restart-case (error 'in-port-busy)
@@ -402,13 +397,13 @@
 	(cancel ()
 	  (values nil nil)))
       (values (the simulator (owner-of in))
-	      (the list (lock-port sim in obj)))))
+	      (the list (lock-evs sim in obj)))))
 
 
-(defmethod output ((sim simulator) (out out-port) (obj object))
+(defmethod output-evs ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> events
 
-   Purpose: to create a new event that will call handle-input on the
+   Purpose: to create a new event that will call input-evs on the
             destination of out and the given object.
 
    Description: specialize this method and wrap call-next-method with
@@ -418,22 +413,20 @@
     (when in
       (multiple-value-bind (dest in-events)
 	  (access-port sim in obj)
-	(leaving (remove-child sim obj)
-		 out obj)
 	(cons (make-instance 'event
 			     :owner dest
 			     :time (clock-of sim)
-			     :fn #'handle-input
+			     :fn #'input-evs
 			     :args (list in obj))
 	      (nconc out-events
 		     in-events
-		     (post-output sim out obj)))))))
+		     (post-output-evs (remove-child sim obj)
+				      out obj)))))))
 
-
-(defmethod post-output ((sim simulator) (out out-port) (obj object))
+(defmethod post-output-evs ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> events
 
-   Purpose: post output hook."
+   Purpose: post output-evs hook."
   (error "Specialize me!"))
 
 
@@ -454,14 +447,6 @@
    Purpose: to remove obj from the children map of sim."
   (remhash (id-of obj) (children-by-id-of sim))
   sim)
-
-
-(defmethod leaving ((sim simulator) (out out-port) (obj object))
-  "Contract: simulator out-port object -> simulator
-
-   Purpose: to provide a hook to process an object leaving the
-            simulator through out."
-  (error "specialize me!"))
 
 
 (defmethod add-children ((sim simulator) (ch list))
