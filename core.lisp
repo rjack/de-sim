@@ -423,6 +423,7 @@
 		     (post-output-evs (remove-child sim obj)
 				      out obj)))))))
 
+
 (defmethod post-output-evs ((sim simulator) (out out-port) (obj object))
   "Contract: simulator out-port object -> events
 
