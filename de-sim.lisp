@@ -159,62 +159,41 @@
     :type list)))
 
 
-(defclass port ()
+(defclass channel ()
   ((id
-    :reader id-of
+    :reader id
     :type id-type)
-   (peer-port
-    :accessor peer-port-of)
-   (owner
-    :initarg :owner
-    :initform (error ":owner missing")
-    :accessor owner-of
-    :type simulator)
-   (lock
-    :initarg :lock
-    :initform nil
-    :accessor lock-of
-    :type boolean)
-   (waiting-queue
-    :initform (list)
-    :accessor waiting-queue-of
-    :type list
-    :documentation "List of sims waiting to use this port")))
+   (peers
+    :accessor peers
+    :type (cons (or nil simulator) (or nil simulator)))
+   (locks
+    :accessor locks
+    :type (cons boolean boolean))
+   (waiting-no
+    :initform (cons 0 0)
+    :accessor waiting-no
+    :type (cons (integer 0) (integer 0)))))
 
 
-(defclass in-port (port)
+;; CONDITIONS AND ERRORS
+
+(define-condition channel-i/o-error (error)
   nil)
 
 
-(defclass out-port (port)
+(define-condition channel-not-connected (channel-i/o-error)
   nil)
 
 
-;; CONDITIONS
-
-(define-condition i/o-transition-error (error)
+(define-condition channel-locked (channel-i/o-error)
   nil)
 
-
-(define-condition port-not-connected (i/o-transition-error)
-  nil)
-
-
-(define-condition out-port-busy (i/o-transition-error)
-  nil)
-
-
-(define-condition in-port-busy (i/o-transition-error)
-  nil)
 
 
 ;; RESTART FUNCTIONS
 
 (defun wait (c)
-  (cond ((typep c 'out-port-busy)
-	 (invoke-restart 'wait-out))
-	((typep c 'in-port-busy)
-	 (invoke-restart 'wait-in))
+  (cond ((typep c 'channel-locked) (invoke-restart 'wait))
 	(t (error "Bad condition type!"))))
 
 
@@ -225,10 +204,10 @@
 
 ;; INITIALIZE-INSTANCE
 
-(let ((fresh-port-id 0))
-  (defmethod initialize-instance :after ((pt port) &key)
-    (setf (slot-value pt 'id)
-	  (incf fresh-port-id))))
+(let ((fresh-channel-id 0))
+  (defmethod initialize-instance :after ((ch channel) &key)
+    (setf (slot-value ch 'id)
+	  (incf fresh-channel-id))))
 
 
 (let ((fresh-event-id 0))
@@ -267,8 +246,8 @@
        (id-of b)))
 
 
-(defmethod input-evs ((sim simulator) (in in-port) (obj object))
-  "Contract: simulator in-port object -> events
+(defmethod input-evs ((sim simulator) (ch channel) (obj object))
+  "Contract: simulator channel object -> events
 
    Purpose: to add object to the children of sim.
 
@@ -276,7 +255,7 @@
   (add-child sim obj))
 
 
-(defmethod connect-port ((out out-port) (in in-port))
+(defmethod connect! ((sim-1 simulator) (sim-2 simulator))
   "Contract: simulator out-port in-port -> nil"
   (setf (peer-port-of out) in)
   (setf (peer-port-of in) out)
