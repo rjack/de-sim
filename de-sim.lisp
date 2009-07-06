@@ -38,56 +38,14 @@
 (defpackage :org.altervista.rjack.de-sim
   (:nicknames :de-sim)
   (:use :common-lisp)
-  (:export :id-type :time-type
-	   :object :id :id-of :parent :parent-of
-	   :simulator :clock :clock-of
-	   :scenario
-	   :event :owner-of :time-of :fn-of :args-of
-	   :port :lock-of :waiting-queue-of
-	   :in-port :out-port
-	   :i/o-transition-error
-	   :port-not-connected
-	   :out-port-busy
-	   :in-port-busy
-	   :wait :cancel
-	   :obj=
-	   :input-evs
-	   :connect-port :disconnect-port
-	   :lock-evs :unlock-evs
-	   :in-ready-evs :out-ready-evs :access-port
-	   :output-evs :post-output-evs
-	   :add-child :remove-child :add-children :remove-children
-	   :schedule
-	   :cancel-event
-	   :evolving
-	   :evolve))
+  (:export
+   TODO)
 (in-package :de-sim)
 
 
 
 ;; GENERICS
 
-(defgeneric obj= (object object))
-(defgeneric input-evs (simulator in-port object))
-(defgeneric connect-port (out-port in-port))
-(defgeneric disconnect-port (port))
-(defgeneric lock-evs (simulator port object))
-(defgeneric unlock-evs (simulator port))
-(defgeneric in-ready-evs (simulator out-port))
-(defgeneric out-ready-evs (simulator out-port))
-(defgeneric access-port (simulator out-port object))
-(defgeneric access-port (simulator in-port object))
-(defgeneric output-evs (simulator out-port object))
-(defgeneric post-output-evs (simulator out-port object))
-(defgeneric add-child (simulator object))
-(defgeneric remove-child (simulator object))
-(defgeneric add-children (simulator children))
-(defgeneric remove-children (simulator children))
-(defgeneric schedule (scenario events))
-(defgeneric cancel-event (event))
-(defgeneric synchronize (simulator tm))
-(defgeneric evolve (simulator event))
-(defgeneric evolving (scenario))
 
 
 ;; TYPES
@@ -105,26 +63,28 @@
 
 
 (defclass object ()
+  ;; TODO: merge object's slot in simulator
+  ;; and remove object/simulator distinction
   ((id
-    :reader id-of
+    :reader id
     :type id-type)
    (parent
-    :accessor parent-of)))
+    :accessor parent)))
 
 
 (defclass simulator (object)
   ((clock
-    :accessor clock-of
+    :accessor clock
     :type time-type)
    (children-by-id
     :initform (make-hash-table)
-    :reader children-by-id-of
+    :reader children-by-id
     :type hash-table)))
 
 
 (defclass scenario (simulator)
   ((events
-    :accessor events-of
+    :accessor events
     :initform (list)
     :type list)))
 
@@ -132,31 +92,31 @@
 (defclass event ()
   ((canceled-p
     :initform nil
-    :accessor canceled-p-of
+    :accessor canceled-p
     :type boolean)
    (id
-    :reader id-of
+    :reader id
     :type id-type)
    (owner
     :initarg :owner
     :initform (error ":owner missing")
-    :accessor owner-of
+    :accessor owner
     :type simulator)
    (time
     :initarg :time
     :initform (error ":time missing")
-    :accessor time-of
+    :accessor time
     :type time-type)
    (fn
     :initarg :fn
     :initform (error ":fn missing")
-    :accessor fn-of
+    :accessor fn
     :type function)
    (args
     :initarg :args
-    ;; unbound if unused
-    :accessor args-of
-    :type list)))
+    :accessor args
+    :type list
+    :documentation "unbound if unused")))
 
 
 (defclass channel ()
@@ -228,22 +188,22 @@
 (defmethod print-object ((ev event) s)
   (print-unreadable-object (ev s :type t)
     (format s "time: ~a fn: ~a"
-	    (time-of ev) (fn-of ev))
+	    (time ev) (fn ev))
     (when (slot-boundp ev 'args)
-      (format s " args: ~a" (args-of ev)))
-    (format s "owner: ~a" (owner-of ev))))
+      (format s " args: ~a" (args ev)))
+    (format s "owner: ~a" (owner ev))))
 
 
 
 ;; FUNCTIONS AND METHODS
 
 
-(defmethod obj= ((a object) (b object))
+(defmethod same? ((a object) (b object))
   "Contract: object object -> boolean
 
    Purpose: to test for equality."
-  (eql (id-of a)
-       (id-of b)))
+  (eql (id a)
+       (id b)))
 
 
 (defmethod input-evs ((sim simulator) (ch channel) (obj object))
@@ -257,14 +217,14 @@
 
 (defmethod connect! ((sim-1 simulator) (sim-2 simulator))
   "Contract: simulator out-port in-port -> nil"
-  (setf (peer-port-of out) in)
-  (setf (peer-port-of in) out)
+  (setf (peer-port out) in)
+  (setf (peer-port in) out)
   nil)
 
 
 (defmethod disconnect-port ((p port))
   "Contract: out-port -> nil"
-  (slot-unbound 'port (owner-of (peer-port-of p)) 'peer-port)
+  (slot-unbound 'port (owner (peer-port p)) 'peer-port)
   (slot-unbound 'port p 'peer-port)
   nil)
 
@@ -279,31 +239,31 @@
    Description: the default lock policy is to not lock.
                 Specialize this method to provide your own lock
                 policy."
-  (assert (not (lock-of p)) nil "Locking a locked port.")
+  (assert (not (lock p)) nil "Locking a locked port.")
   nil)
 
 
 (defmethod unlock-evs :before ((sim simulator) (p port))
-  (assert (lock-of p) nil "Unlocking a not locked port!")
-  (setf (lock-of p) nil))
+  (assert (lock p) nil "Unlocking a not locked port!")
+  (setf (lock p) nil))
 
 
 (defmethod unlock-evs ((sim simulator) (in in-port))
   "Contract: out-port -> events"
-  (let ((waiting (pop (waiting-queue-of in))))
+  (let ((waiting (pop (waiting-queue in))))
     (when waiting
       (list (make-instance 'event
 			   :owner waiting
-			   :time (clock-of sim)
+			   :time (clock sim)
 			   :fn #'in-ready-evs
-			   :args (list (peer-port-of in)))))))
+			   :args (list (peer-port in)))))))
 
 
 (defmethod unlock-evs ((sim simulator) (out out-port))
   "Contract: out-port -> events"
   (list (make-instance 'event
 		       :owner sim
-		       :time (clock-of sim)
+		       :time (clock sim)
 		       :fn #'out-ready-evs
 		       :args (list out))))
 
@@ -337,17 +297,17 @@
 
    Description: specialize lock-evs to provide a lock / unlock policy
                 for the out-port."
-  (if (lock-of out)
+  (if (lock out)
       (restart-case (error 'out-port-busy)
 	(wait ()
-	  (setf (waiting-queue-of out)
-		(append (waiting-queue-of out)
+	  (setf (waiting-queue out)
+		(append (waiting-queue out)
 			(list sim)))
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
       (if (slot-boundp out 'peer-port)
-	  (values (the in-port (peer-port-of out))
+	  (values (the in-port (peer-port out))
 		  (lock-evs sim out obj))
 	  (restart-case (error 'port-not-connected)
 	    (cancel ()
@@ -366,16 +326,16 @@
 
    Description: specialize lock-evs to provide a lock / unlock policy
                 for the in-port."
-  (if (lock-of in)
+  (if (lock in)
       (restart-case (error 'in-port-busy)
 	(wait ()
-	  (setf (waiting-queue-of in)
-		(append (waiting-queue-of in)
+	  (setf (waiting-queue in)
+		(append (waiting-queue in)
 			(list sim)))
 	  (values nil nil))
 	(cancel ()
 	  (values nil nil)))
-      (values (the simulator (owner-of in))
+      (values (the simulator (owner in))
 	      (the list (lock-evs sim in obj)))))
 
 
@@ -394,7 +354,7 @@
 	  (access-port sim in obj)
 	(cons (make-instance 'event
 			     :owner dest
-			     :time (clock-of sim)
+			     :time (clock sim)
 			     :fn #'input-evs
 			     :args (list in obj))
 	      (nconc out-events
@@ -415,9 +375,9 @@
 
    Purpose: to add obj into the children map of sim and to set sim as
             parent of obj."
-  (setf (gethash (id-of obj) (children-by-id-of sim))
+  (setf (gethash (id obj) (children-by-id sim))
 	obj)
-  (setf (parent-of obj) sim)
+  (setf (parent obj) sim)
   sim)
 
 
@@ -425,7 +385,7 @@
   "Contract: simulator object -> simulator
 
    Purpose: to remove obj from the children map of sim."
-  (remhash (id-of obj) (children-by-id-of sim))
+  (remhash (id obj) (children-by-id sim))
   sim)
 
 
@@ -455,9 +415,9 @@
    Purpose: to add the given events to the scenario, keeping them
             ordered by time."
   (flet ((sort-events (evs)
-	   (stable-sort evs #'< :key #'time-of)))
-    (setf (events-of sce)
-	  (sort-events (append (events-of sce)
+	   (stable-sort evs #'< :key #'time)))
+    (setf (events sce)
+	  (sort-events (append (events sce)
 			       events)))
     sce))
 
@@ -466,7 +426,7 @@
   "Contract: event -> nil
 
    Purpose: to set the canceled flag of ev by side effect."
-  (setf (canceled-p-of ev) t)
+  (setf (canceled-p ev) t)
   nil)
 
 
@@ -475,7 +435,7 @@
 
    Purpose: to synchronize sim's internal clock with the given time."
   (declare (time-type tm))
-  (setf (clock-of sim)
+  (setf (clock sim)
 	tm)
   sim)
 
@@ -486,10 +446,10 @@
    Purpose: to apply the event to sim
 
    Example: (evolve bell hit-event) -> ring-event vibrate-event"
-  (let ((res (apply (fn-of ev)
-		    (append (list (synchronize sim (time-of ev)))
+  (let ((res (apply (fn ev)
+		    (append (list (synchronize sim (time ev)))
 			    (when (slot-boundp ev 'args)
-			      (args-of ev))))))
+			      (args ev))))))
     (if (listp res)
 	res
 	(list res))))
@@ -501,7 +461,7 @@
    Purpose: to return the next simulator that must execute its event.
 
    Example: (multiple-value-call #'evolve (evolving example-scenario))"
-  (let ((ev (pop (events-of sce))))
+  (let ((ev (pop (events sce))))
     (cond ((null ev) (values nil nil))
-	  ((canceled-p-of ev) (evolving sce))
-	  (t (values (owner-of ev) ev)))))
+	  ((canceled-p ev) (evolving sce))
+	  (t (values (owner ev) ev)))))
