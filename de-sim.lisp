@@ -86,6 +86,13 @@
 	  (sb-mop::class-slots (class-of instance))))
 
 
+(defun ht->list (ht)
+  (declare (hash-table ht))
+  (loop
+     :for val :being :the :hash-values :in ht
+     :collecting val))
+
+
 (defun ! (obj &rest slot-value-plist)
   "Clone obj and return the eventually modified copy.
    Example: class A has slots FOO and BAR.
@@ -128,9 +135,8 @@
        (owner-id ev)))
 
 
-(defun children (sim)
-  (declare (ignorable sim))
-  nil)
+(defmethod children ((sim simulator))
+  (ht->list (children-ht sim)))
 
 
 (defun evolve (sim evs)
