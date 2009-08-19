@@ -58,7 +58,9 @@
 
 
 (defclass event ()
-  ((tm
+  ((owner-id
+    :accessor owner-id)
+   (tm
     :accessor tm)
    (fn
     :accessor fn)))
@@ -117,9 +119,13 @@
 	   (! sim :tm (tm ev))))
 
 
+(defun id= (id1 id2)
+  (= id1 id2))
+
+
 (defun owner-p (sim ev)
-  (declare (ignorable sim ev))
-  sim)
+  (id= (id sim)
+       (owner-id ev)))
 
 
 (defun children (sim)
