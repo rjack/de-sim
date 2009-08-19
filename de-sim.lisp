@@ -79,43 +79,47 @@
 
 ;; utils
 
-(defun list-slots (inst)
+(defun list-slots (instance)
   (mapcar #'sb-mop::slot-definition-name
-	  (sb-mop::class-slots (class-of inst))))
+	  (sb-mop::class-slots (class-of instance))))
 
 
-(defmacro ! (obj place value)
-  ;; (! sim :tm (tm ev)
-  ;;        :name "pippo")
-  (let ((obj-copy-name (gensym))
-	(place-name (gensym)))
-    `(let ((,obj-copy-name (clone ,obj)))
-       (symbol-macrolet ((,place-name ,place))
-	 (setf ,place-name ,value)
-	 ,obj-copy-name))))
-
-
-;; clone
-
-(defun clone (obj)
-  (transform! (make-instance (class-of obj))
-	      obj))
+(defun ! (obj &rest slot-value-plist)
+  "Clone obj and return the eventually modified copy.
+   Example: class A has slots FOO and BAR.
+            (setf *org* (make-instance 'a :foo 'foo :bar 'bar))
+            (setf *cpy0* (! *org*))
+            (setf *cpy1* (! *org* :foo 'new-foo))
+            (setf *cpy2* (! *org* :foo 'new-foo :bar 'new-bar))"
+  (let ((obj-copy (make-instance (class-of obj)))
+	(slots-to-copy (list-slots obj)))
+    ;; Set the given value for each slot specified in
+    ;; slot-value-plist.
+    (do* ((s/v slot-value-plist (cddr s/v))
+	  (slot (first s/v) (first s/v))
+	  (value (second s/v) (second s/v)))
+	 ((null slot) nil)
+      (let ((slot-symbol (intern (string slot))))
+	(setf (slot-value obj-copy slot-symbol)
+	      value)
+	(setf slots-to-copy
+	      (remove slot-symbol slots-to-copy))))
+    ;; Copy the remaining slots from the original instance.
+    (when (not (null slots-to-copy))
+      (dolist (s slots-to-copy)
+	(setf (slot-value obj-copy s)
+	      (slot-value obj s))))
+    obj-copy))
 
 
 (defmethod fire ((sim simulator) (ev event))
   (funcall (fn ev)
-	   (! sim (tm sim) (tm ev))))
+	   (! sim :tm (tm ev))))
 
 
 (defun owner-p (sim ev)
   (declare (ignorable sim ev))
   sim)
-
-
-(defmethod transform! ((cpy dummy) (org dummy))
-  (setf (uno cpy) (uno org))
-  (setf (due cpy) (due org))
-  cpy)
 
 
 (defun children (sim)
