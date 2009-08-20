@@ -1,0 +1,47 @@
+3 strati: de-sim, *-sim, scenario
+
+1. de-sim e' lo strato del framework: fornisce metodi per definire
+   simulatori.
+
+2. *-sim e' il simulatore, definito per mezzo di de-sim.
+
+3. scenario e' un'istanza di simulazione, ovvero un particolare caso
+   in cui si vuole far funzionare il simulatore.
+
+
+Nello strato 2 si definisce "come e' fatto" il simulatore.
+Nello strato 3 si definisce "cosa succede" parametrizzando il
+simulatore.
+
+La flessibilita' del punto 3 dipende da come e' stato definito il
+simulatore al punto 2.
+
+Piu' in dettaglio:
+
+1. si definiscono i metodi per l'input e l'output, le funzioni e le
+   macro. Il punto 1 crea un linguaggio da utilizzare al punto 2.
+
+2. si usa il linguaggio de-sim per definire un simulatore e il suo
+   comportamento generale.
+
+3. si scrive uno scenario per eseguire e osservare il simulatore in un
+   caso particolare. Vari scenari scritti per lo stesso simulatore
+   permettono di confrontare il comportamento dello stesso simulatore
+   in situazioni differenti.
+
+Esempio strato 2: una automobile e' costituita da 4 ruote, un motore e
+un telaio. Quando il motore alza i giri, le ruote girano piu'
+veloce. Quando le ruote girano piu' veloce, l'automobile corre piu'
+veloce.
+
+Esempio strato 3: ho 2 automobili, una con un motore da 100HP, l'altra
+col motore da 200HP. All'istante t0 parte la prima auto, all'istante
+t1 parte la seconda. C'e' una probabilita' del 50% che il motore della
+prima si rompa entro l'istante t2, etc.
+
+
+Lo strato 2 deve definire il comportamento del simulatore e offire i
+parametri da personalizzare nello strato 3.
+
+Lo strato 3 puo' definire gli attori in gioco, scegliere quali eventi
+accadono e in che istante, poi deve eseguire e monitorare i risultati.
