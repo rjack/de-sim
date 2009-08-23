@@ -50,33 +50,19 @@
 
 ;; classes
 
-(defclass dummy ()
-  ((uno
-    :accessor uno)
-   (due
-    :accessor due)))
-
-
 (defclass event ()
-  ((owner-id
-    :accessor owner-id)
-   (tm
-    :accessor tm)
-   (fn
-    :accessor fn)))
+  ((id       :initarg :id       :accessor id)
+   (owner-id :initarg :owner-id :accessor owner-id)
+   (tm       :initarg :tm       :accessor tm)
+   (fn       :initarg :fn       :accessor fn)
+   (args     :initarg :args     :accessor args)))
 
 
-(defclass simulator ()
-  ((id
-    :accessor id)
-   (clock
-    :accessor clock)
-   (children-ht
-    :accessor children-ht
-    :documentation "indexed by id")
-   (objects-ht
-    :accessor objects-ht
-    :documentation "indexed by id")))
+(defclass sim ()
+  ((id       :initarg :id       :accessor id)
+   (tm       :initarg :tm       :accessor tm)
+   (children :initarg :children :accessor children)
+   (objects  :initarg :objects  :accessor objects)))
 
 
 ;; utils
@@ -133,10 +119,6 @@
 (defun owner-p (sim ev)
   (id= (id sim)
        (owner-id ev)))
-
-
-(defmethod children ((sim simulator))
-  (ht->list (children-ht sim)))
 
 
 (defun evolve (sim evs)
