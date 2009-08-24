@@ -107,6 +107,23 @@
     obj-copy))
 
 
+(defmacro with-gensyms ((&rest names) &body body)
+  `(let ,(loop for n in names collect `(,n (gensym)))
+     ,@body))
+
+
+;; TODO esempio:
+;; (with-locked-socket us lo :tm (transfer-time (size rp)
+;;                                              (bandwidth-in lo))
+;;(defmacro with-locked-socket (sim socket &key (tm 0 tm?) &body body)
+;;  (with-gensyms (sock-name)
+;;    `(let* ((,socket-name ,socket)
+;;	    (new-sim (! ,sim
+;;			(sym->key ,socket-name) ; 'foo -> :foo
+
+
+;; methods
+
 (defmethod fire ((sim simulator) (ev event))
   (funcall (fn ev)
 	   (! sim :tm (tm ev))))
