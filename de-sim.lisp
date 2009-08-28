@@ -108,6 +108,7 @@
 
 
 (defmacro with-gensyms ((&rest names) &body body)
+  "Stolen from Practical Common Lisp."
   `(let ,(loop for n in names collect `(,n (gensym)))
      ,@body))
 
