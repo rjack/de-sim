@@ -125,6 +125,11 @@
   (error 'not-implemented))
 
 
+(defmethod setup-new ((sim simulator))
+  "Crea i componenti di sim e i link tra di essi. Da specializzare."
+  (error 'not-implemented))
+
+
 (defmethod fire ((sim simulator) (ev event))
   (funcall (fn ev)
 	   (! sim :tm (tm ev))))
