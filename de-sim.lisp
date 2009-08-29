@@ -80,6 +80,10 @@
      :collecting val))
 
 
+(defmacro new (class-name &body body)
+  `(setup-new (make-istance ,class-name ,@body)))
+
+
 (defun ! (obj &rest slot-value-plist)
   "Clone obj and return the eventually modified copy.
    Example: class A has slots FOO and BAR.
