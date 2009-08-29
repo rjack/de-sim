@@ -61,8 +61,9 @@
 (defclass sim ()
   ((id       :initarg :id       :accessor id)
    (tm       :initarg :tm       :accessor tm)
-   (children :initarg :children :accessor children)
-   (objects  :initarg :objects  :accessor objects)))
+   (objects  :initarg :objects  :accessor objects)
+   ;; link manager per gestire i collegamenti tra componenti
+   (lm       :initarg :lm       :accessor lm)))
 
 
 ;; utils
@@ -115,6 +116,9 @@
 
 ;; methods
 
+(defmethod children ((sim simulator))
+  "Ritorna i simulatori che compongono sim. Da specializzare."
+  (error 'not-implemented))
 
 
 (defmethod fire ((sim simulator) (ev event))
