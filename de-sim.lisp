@@ -66,6 +66,30 @@
    (lm       :initarg :lm       :accessor lm)))
 
 
+(defclass ln (sim)
+  ((lock     :initarg :lock     :accessor lock)
+   (a-peer   :initarg :a-peer   :accessor a-peer)
+   (b-peer   :initarg :a-peer   :accessor b-peer)))
+
+
+(defclass ln-> (ln)
+  ;; Simplex da a verso b: b trovera' *sempre* locked.
+  nil)
+
+
+(defclass ln<-> (ln)
+  ;; Half duplex tra a e b.
+  ;; lock condiviso: se lock per a, locked anche per b e viceversa.
+  nil)
+
+
+(defclass ln<=> (ln)
+  ;; Full duplex tra a e b: lock indipendenti.
+  ((a-lock   :initarg :a-lock   :accessor a-lock)
+   (b-lock   :initarg :b-lock   :accessor b-lock)))
+
+
+
 ;; utils
 
 (defun list-slots (instance)
