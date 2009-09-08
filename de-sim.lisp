@@ -108,32 +108,37 @@
   `(setup-new (make-istance ,class-name ,@body)))
 
 
-(defun ! (obj &rest slot-value-plist)
-  "Clone obj and return the eventually modified copy.
+;; OK, inserisco SIDE EFFECTS
+;; questa servira' per l'invio dei pacchetti di rete, di cui viene
+;; inviata una copia e l'originale resta nel buffer dell'interfaccia,
+;; come nella realta'.
+(defun modify (obj &rest slot-value-plist)
+  "Return the modified instance of obj.
    Example: class A has slots FOO and BAR.
-            (setf *org* (make-instance 'a :foo 'foo :bar 'bar))
-            (setf *cpy0* (! *org*))
-            (setf *cpy1* (! *org* :foo 'new-foo))
-            (setf *cpy2* (! *org* :foo 'new-foo :bar 'new-bar))"
-  (let ((obj-copy (make-instance (class-of obj)))
-	(slots-to-copy (list-slots obj)))
-    ;; Set the given value for each slot specified in
-    ;; slot-value-plist.
-    (do* ((s/v slot-value-plist (cddr s/v))
-	  (slot (first s/v) (first s/v))
-	  (value (second s/v) (second s/v)))
-	 ((null slot) nil)
-      (let ((slot-symbol (intern (string slot))))
-	(setf (slot-value obj-copy slot-symbol)
-	      value)
-	(setf slots-to-copy
-	      (remove slot-symbol slots-to-copy))))
-    ;; Copy the remaining slots from the original instance.
-    (when (not (null slots-to-copy))
-      (dolist (s slots-to-copy)
-	(setf (slot-value obj-copy s)
-	      (slot-value obj s))))
-    obj-copy))
+            (setf *obj* (make-instance 'a :foo 'foo :bar 'bar))
+            (modify *org*)  ; nothing changed
+            (modify *org* :foo 'new-foo)  ; change foo
+            (modify *org* :foo 'new-foo :bar 'new-bar)"
+  ;; Set the given value for each slot specified in
+  ;; slot-value-plist.
+  (do* ((s/v slot-value-plist (cddr s/v))
+	(slot-kwd (first s/v) (first s/v))
+	(value (second s/v) (second s/v)))
+       ((null slot-kwd) obj)
+    (let ((slot-symbol (intern (string slot-kwd))))
+      (setf (slot-value obj slot-symbol)
+	    value))))
+
+
+(defun clone (obj &rest slot-value-plist)
+  (let ((obj-copy (apply #'modify
+			 (make-instance (class-of obj))
+			 slot-value-plist)))
+    (dolist (slot-name (list-slots obj) obj-copy)
+      (when (and (slot-boundp obj slot-name)
+		 (not (slot-boundp obj-copy slot-name)))
+	(setf (slot-value obj-copy slot-name)
+	      (slot-value obj slot-name))))))
 
 
 (defmacro with-gensyms ((&rest names) &body body)
