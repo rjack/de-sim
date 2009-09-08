@@ -50,26 +50,28 @@
 
 ;; classes
 
-(defclass event ()
-  ((id       :initarg :id       :accessor id)
-   (owner-id :initarg :owner-id :accessor owner-id)
+;; Classe di base, tutte le altre DEVONO estenderla per avere l'id che
+;; permette di riconoscere copie diverse dello stesso oggetto.
+(defclass base ()
+  ((id       :initarg :id       :accessor id)))
+
+
+(defclass event (base)
+  ((owner-id :initarg :owner-id :accessor owner-id)
    (tm       :initarg :tm       :accessor tm)
    (fn       :initarg :fn       :accessor fn)
    (args     :initarg :args     :accessor args)))
 
 
-(defclass sim ()
-  ((id       :initarg :id       :accessor id)
-   (tm       :initarg :tm       :accessor tm)
+(defclass sim (base)
+  ((tm       :initarg :tm       :accessor tm)
    (objects  :initarg :objects  :accessor objects)
    ;; link manager per gestire i collegamenti tra componenti
    (lm       :initarg :lm       :accessor lm)))
 
 
-(defclass ln (sim)
-  ((lock     :initarg :lock     :accessor lock)
-   (a-peer   :initarg :a-peer   :accessor a-peer)
-   (b-peer   :initarg :a-peer   :accessor b-peer)))
+(defclass ln (base)
+  ((lock     :initarg :lock     :accessor lock)))
 
 
 (defclass ln-> (ln)
