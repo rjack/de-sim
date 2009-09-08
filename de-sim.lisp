@@ -70,8 +70,8 @@
    (lm       :initarg :lm       :accessor lm)))
 
 
-(defclass ln (base)
-  ((lock     :initarg :lock     :accessor lock)))
+(defclass ln (sim)
+  ((lock     :initarg :lock     :accessor lock :type boolean)))
 
 
 (defclass ln-> (ln)
@@ -87,9 +87,7 @@
 
 (defclass ln<=> (ln)
   ;; Full duplex tra a e b: lock indipendenti.
-  ((a-lock   :initarg :a-lock   :accessor a-lock)
-   (b-lock   :initarg :b-lock   :accessor b-lock)))
-
+  ((lock   :initarg :lock   :accessor lock :type cons)))
 
 
 ;; utils
