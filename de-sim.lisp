@@ -59,8 +59,7 @@
 (defclass event (base)
   ((owner-id :initarg :owner-id :accessor owner-id)
    (tm       :initarg :tm       :accessor tm)
-   (fn       :initarg :fn       :accessor fn)
-   (args     :initarg :args     :accessor args)))
+   (fn       :initarg :fn       :accessor fn)))
 
 
 (defclass sim (base)
