@@ -48,45 +48,52 @@
   nil)
 
 
-;; classes
+;; Classes
 
 ;; Classe di base, tutte le altre DEVONO estenderla per avere l'id che
 ;; permette di riconoscere copie diverse dello stesso oggetto.
-(defclass base ()
-  ((id       :initarg :id       :accessor id)))
+(defclass obj ()
+  ((id       :initarg :id       :accessor id)
+   ;; vero se l'oggetto deve essere considerato "morto"
+   (dead     :initarg :dead     :accessor dead)))
 
 
-(defclass event (base)
+(defclass event (obj)
   ((owner-id :initarg :owner-id :accessor owner-id)
    (tm       :initarg :tm       :accessor tm)
    (fn       :initarg :fn       :accessor fn)))
 
 
-(defclass sim (base)
-  ((tm       :initarg :tm       :accessor tm)
-   (objects  :initarg :objects  :accessor objects)
-   ;; link manager per gestire i collegamenti tra componenti
-   (lm       :initarg :lm       :accessor lm)))
+(defclass bag (obj)
+  ((lock     :initarg :lock     :accessor lock    :type boolean)
+   (elements :initarg :elements :accessor elements)
+   (sources  :initarg :sources  :accessor sources :type list)
+   (dests    :initarg :dests    :accessor dests   :type list)))
 
 
-(defclass ln (sim)
-  ((lock     :initarg :lock     :accessor lock :type boolean)))
-
-
-(defclass ln-> (ln)
-  ;; Simplex da a verso b: b trovera' *sempre* locked.
+(defclass priority-queue (bag)
   nil)
 
 
-(defclass ln<-> (ln)
-  ;; Half duplex tra a e b.
-  ;; lock condiviso: se lock per a, locked anche per b e viceversa.
+(defclass sim (obj)
+  ((tm       :initarg :tm       :accessor tm)))
+
+
+(defclass ln-> (sim)
+  ((a-id     :initarg :a-id     :accessor a-id)
+   (a2bq     :initarg :a2bq     :accessor a2bq :type priority-queue)
+   (bw       :initarg :bw       :accessor bw)
+   (err-rate :initarg :err-rate :accessor err-rate)
+   (delay    :initarg :delay    :accessor delay)))
+
+
+(defclass ln<-> (ln->)
+  ((b-id     :initarg :b-id     :accessor b-id)
+   (b2aq     :initarg :b2aq     :accessor b2aq :type priority-queue)))
+
+
+(defclass ln<=> (ln<=>)
   nil)
-
-
-(defclass ln<=> (ln)
-  ;; Full duplex tra a e b: lock indipendenti.
-  ((lock   :initarg :lock   :accessor lock :type cons)))
 
 
 ;; utils
@@ -157,6 +164,12 @@
   "Crea i componenti di sim e i link tra di essi. Da specializzare."
   (error 'not-implemented))
 
+
+(defmethod connect ((bag src) (bag dst))
+  ;; TODO
+  ;; push (dests src) dst
+  ;; push (sources dst) src
+  nil)
 
 (defmethod fire ((sim simulator) (ev event))
   (funcall (fn ev)
