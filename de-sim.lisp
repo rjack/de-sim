@@ -31,11 +31,11 @@
 ;(declaim (optimize (debug 0) (safety 0) speed))
 
 
-(defpackage :it.unibo.cs.web.ritucci.de-sim
-  (:nicknames :de-sim)
-  (:use :common-lisp)
-  (:export))
-(in-package :de-sim)
+;(defpackage :it.unibo.cs.web.ritucci.de-sim
+;  (:nicknames :de-sim)
+;  (:use :common-lisp)
+;  (:export))
+;(in-package :de-sim)
 
 
 ;; errors
@@ -47,6 +47,8 @@
 (define-condition not-implemented (error)
   nil)
 
+
+(defgeneric setup-new! (obj))
 
 ;; Classes
 
@@ -102,7 +104,7 @@
 
 (let ((id -1))
 
-  (defun genid ()
+  (defun genid! ()
     (incf id)))
 
 
@@ -119,14 +121,14 @@
 
 
 (defmacro new (class-name &body body)
-  `(setup-new (make-instance ,class-name ,@body)))
+  `(setup-new! (make-instance ,class-name ,@body)))
 
 
 ;; OK, inserisco SIDE EFFECTS
 ;; questa servira' per l'invio dei pacchetti di rete, di cui viene
 ;; inviata una copia e l'originale resta nel buffer dell'interfaccia,
 ;; come nella realta'.
-(defun modify (obj &rest slot-value-plist)
+(defun modify! (obj &rest slot-value-plist)
   "Return the modified instance of obj.
    Example: class A has slots FOO and BAR.
             (setf *obj* (make-instance 'a :foo 'foo :bar 'bar))
@@ -145,7 +147,7 @@
 
 
 (defun clone (obj &rest slot-value-plist)
-  (let ((obj-copy (apply #'modify
+  (let ((obj-copy (apply #'modify!
 			 (make-instance (class-of obj))
 			 slot-value-plist)))
     (dolist (slot-name (list-slots obj) obj-copy)
@@ -161,24 +163,19 @@
      ,@body))
 
 
-;; METODI
+;; METODI OBJ
 
 
-(defmethod setup-new :around ((o obj))
+(defmethod setup-new! ((o obj))
   (with-slots (id dead) o
-    (setf id (genid))
+    (setf id (genid!))
     (setf dead nil))
-  (call-next-method))
+  o)
 
 
-(defmethod setup-new ((s sim))
-  "Crea i componenti di sim e i link tra di essi. Da specializzare."
-  s)
+;; METODI BAG
 
-
-;; BAGS
-
-(defmethod setup-new :around ((b bag))
+(defmethod setup-new! :around ((b bag))
   (with-slots (lock elements sources dests) b
     (setf lock nil)
     (setf elements (list))
@@ -187,14 +184,25 @@
   (call-next-method))
 
 
-(defmethod connect ((src bag) (dst bag))
+(defmethod connect! ((src bag) (dst bag))
   (push dst (dests src))
   (push src (sources dst)))
 
 
-(defmethod fire ((s sim) (ev event))
+(defmethod insert! ((b bag) (o obj))
+  (setf (elements b)
+	(append (elements b) (list o))))
+
+
+(defmethod remove! ((b bag))
+  (pop (elements b)))
+
+
+;; METODI SIMULAZIONE
+
+(defmethod fire! ((s sim) (ev event))
   (funcall (fn ev)
-	   (modify s :tm (tm ev))))
+	   (modify! s :tm (tm ev))))
 
 
 (defmethod id= ((s1 sim) (s2 sim))
