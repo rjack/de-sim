@@ -64,24 +64,25 @@
    (fn       :initarg :fn       :accessor fn)))
 
 
+(defclass sim (obj)
+  ((tm       :initarg :tm       :accessor tm)))
+
+
 (defclass bag (obj)
-  ((lock     :initarg :lock     :accessor lock    :type boolean)
+  ((owner    :initarg :owner    :accessor owner   :type sim)
+   (lock     :initarg :lock     :accessor lock    :type boolean)
    (elements :initarg :elements :accessor elements)
    (sources  :initarg :sources  :accessor sources :type list)
    (dests    :initarg :dests    :accessor dests   :type list)))
 
 
-(defclass priority-queue (bag)
+(defclass scenario (sim)
   nil)
-
-
-(defclass sim (obj)
-  ((tm       :initarg :tm       :accessor tm)))
 
 
 (defclass ln-> (sim)
   ((a-id     :initarg :a-id     :accessor a-id)
-   (a2bq     :initarg :a2bq     :accessor a2bq :type priority-queue)
+   (a2bq     :initarg :a2bq     :accessor a2bq :type bag)
    (bw       :initarg :bw       :accessor bw)
    (err-rate :initarg :err-rate :accessor err-rate)
    (delay    :initarg :delay    :accessor delay)))
@@ -89,14 +90,21 @@
 
 (defclass ln<-> (ln->)
   ((b-id     :initarg :b-id     :accessor b-id)
-   (b2aq     :initarg :b2aq     :accessor b2aq :type priority-queue)))
+   (b2aq     :initarg :b2aq     :accessor b2aq :type bag)))
 
 
-(defclass ln<=> (ln<=>)
+(defclass ln<=> (ln<->)
   nil)
 
 
 ;; utils
+
+
+(let ((id -1))
+
+  (defun genid ()
+    (incf id)))
+
 
 (defun list-slots (instance)
   (mapcar #'sb-mop::slot-definition-name
@@ -111,7 +119,7 @@
 
 
 (defmacro new (class-name &body body)
-  `(setup-new (make-istance ,class-name ,@body)))
+  `(setup-new (make-instance ,class-name ,@body)))
 
 
 ;; OK, inserisco SIDE EFFECTS
@@ -153,50 +161,41 @@
      ,@body))
 
 
-;; methods
-
-(defmethod children ((sim simulator))
-  "Ritorna i simulatori che compongono sim. Da specializzare."
-  (error 'not-implemented))
+;; METODI
 
 
-(defmethod setup-new ((sim simulator))
+(defmethod setup-new :around ((o obj))
+  (with-slots (id dead) o
+    (setf id (genid))
+    (setf dead nil))
+  (call-next-method))
+
+
+(defmethod setup-new ((s sim))
   "Crea i componenti di sim e i link tra di essi. Da specializzare."
-  (error 'not-implemented))
+  s)
 
 
-(defmethod connect ((bag src) (bag dst))
-  ;; TODO
-  ;; push (dests src) dst
-  ;; push (sources dst) src
-  nil)
+;; BAGS
 
-(defmethod fire ((sim simulator) (ev event))
+(defmethod setup-new :around ((b bag))
+  (with-slots (lock elements sources dests) b
+    (setf lock nil)
+    (setf elements (list))
+    (setf sources (list))
+    (setf dests (list)))
+  (call-next-method))
+
+
+(defmethod connect ((src bag) (dst bag))
+  (push dst (dests src))
+  (push src (sources dst)))
+
+
+(defmethod fire ((s sim) (ev event))
   (funcall (fn ev)
-	   (! sim :tm (tm ev))))
+	   (modify s :tm (tm ev))))
 
 
-(defun id= (id1 id2)
-  (= id1 id2))
-
-
-(defun owner-p (sim ev)
-  (id= (id sim)
-       (owner-id ev)))
-
-
-(defun evolve (sim evs)
-  "Evolve a simulator."
-  (labels ((find-owner (ev &optional (sims nil))
-	     "Returns the owner of ev among sims or throws a
-              not-found error."
-	     (let ((sim (first sims)))
-	       (cond ((null sim) (error 'not-found))
-		     ((owner-p sim ev) sim)
-		     (t (find-owner ev (append (rest sims)
-					       (children sim))))))))
-    (let ((ev (first evs)))
-      (fire (restart-case (find-owner ev sim)
-	      (skip-ev ()
-		(evolve sim (rest evs))))
-	    ev))))
+(defmethod id= ((s1 sim) (s2 sim))
+  (= (id s1) (id s2)))
