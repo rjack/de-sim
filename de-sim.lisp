@@ -67,15 +67,16 @@
 
 
 (defclass sim (obj)
-  ((tm       :initarg :tm       :accessor tm)))
+  nil)
 
 
 (defclass bag (obj)
-  ((owner    :initarg :owner    :accessor owner   :type sim)
-   (lock     :initarg :lock     :accessor lock    :type boolean)
-   (elements :initarg :elements :accessor elements)
-   (sources  :initarg :sources  :accessor sources :type list)
-   (dests    :initarg :dests    :accessor dests   :type list)))
+  ((owner    :initarg :owner    :accessor owner    :type sim)
+   (lock?    :initarg :lock?    :accessor lock?    :type boolean)
+   (flush?   :initarg :flush?   :accessor flush?   :type boolean)
+   (elements :initarg :elements :accessor elements :type list)
+   (sources  :initarg :sources  :accessor sources  :type list)
+   (dests    :initarg :dests    :accessor dests    :type list)))
 
 
 (defclass scenario (sim)
@@ -176,8 +177,9 @@
 ;; METODI BAG
 
 (defmethod setup-new! :around ((b bag))
-  (with-slots (lock elements sources dests) b
-    (setf lock nil)
+  (with-slots (lock? flush? elements sources dests) b
+    (setf lock? nil)
+    (setf flush? nil)
     (setf elements (list))
     (setf sources (list))
     (setf dests (list)))
@@ -189,6 +191,10 @@
   (push src (sources dst)))
 
 
+(defmethod choose-dest! ((s sim) (b bag) (o obj))
+  (first (dests b)))
+
+
 (defmethod insert! ((b bag) (o obj))
   (setf (elements b)
 	(append (elements b) (list o))))
@@ -198,12 +204,62 @@
   (pop (elements b)))
 
 
+(defmethod end-flush! ((b bag))
+  (if (not (flush? b))
+      (error "end-flush! su bag non flushante")
+      (setf (flush? b) nil)))
+
+
+(defmethod start-flush! ((b bag))
+  (setf (flush? b) t)
+  (let ((o (remove! b)))
+    (if (null o)
+	(error "start-flush! su bag vuota")
+	(out! (owner b) b o))))
+
+
+(defmethod continue-flush! ((b bag))
+  (if (not (flush? b))
+      (error "continue-flush! su bag non flushante")
+      (let ((o (remove! b)))
+	(if (null o)
+	    (end-flush! b)
+	    (out! (owner b) b o)))))
+
+
+(defmethod flush! ((b bag))
+  (if (flush? b)
+      (continue-flush! b)
+      (start-flush! b)))
+
+
+(defmethod in! ((s sim) (b bag) (o obj))
+    (insert! b o)
+    (flush! b))
+
+
+(defmethod out! ((s sim) (b bag) (o obj))
+    (let ((dst (choose-dest s b o)))
+      (access? (owner dst) dst o))
+    ;; TODO FIXME!
+    ;; chiamata a in! deve essere un nuovo evento
+    ;; quindi due eventi, contando anche il continue-flush!
+    (in! s b o))
+
+
 ;; METODI SIMULAZIONE
 
-(defmethod fire! ((s sim) (ev event))
-  (funcall (fn ev)
-	   (modify! s :tm (tm ev))))
+
+(let ((clock 0))
+
+  (defun gettime! ()
+    clock)
+
+  (defmethod fire! ((s sim) (ev event))
+    (setf clock (tm ev))
+    (funcall (fn ev) s)))
 
 
 (defmethod id= ((s1 sim) (s2 sim))
-  (= (id s1) (id s2)))
+  (= (id s1)
+     (id s2)))
