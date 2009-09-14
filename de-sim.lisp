@@ -280,3 +280,24 @@
 (defmethod id= ((s1 sim) (s2 sim))
   (= (id s1)
      (id s2)))
+
+
+#|
+fire!
+  in!
+    insert!
+    flush!
+      start-flush!
+        out!
+          choose-dest
+          access?
+            wait
+              new event (se retry in tot tempo)
+              oppure nil
+          new events (in! e continue-flush!)
+
+fire!
+  continue-flush!
+    end-flush! -> nil
+    oppure out! (vedi sopra)
+#|
