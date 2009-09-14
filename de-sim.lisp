@@ -48,7 +48,14 @@
   nil)
 
 
+;; restarts
+
+(defun wait (c)
+  (declare (ignore c)))
+
+
 (defgeneric setup-new! (obj))
+(defgeneric out! (sim bag obj))
 
 ;; Classes
 
@@ -191,9 +198,12 @@
   (push src (sources dst)))
 
 
-(defmethod choose-dest! ((s sim) (b bag) (o obj))
+(defmethod choose-dest ((s sim) (b bag) (o obj))
   (first (dests b)))
 
+
+(defmethod access? ((s sim) (b bag) (o obj))
+  t)
 
 (defmethod insert! ((b bag) (o obj))
   (setf (elements b)
