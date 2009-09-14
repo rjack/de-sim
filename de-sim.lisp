@@ -132,6 +132,11 @@
   `(setup-new! (make-instance ,class-name ,@body)))
 
 
+(defmacro ! (&body body)
+  `(progn
+     ,@body
+     nil))
+
 ;; OK, inserisco SIDE EFFECTS
 ;; questa servira' per l'invio dei pacchetti di rete, di cui viene
 ;; inviata una copia e l'originale resta nel buffer dell'interfaccia,
@@ -194,8 +199,8 @@
 
 
 (defmethod connect! ((src bag) (dst bag))
-  (push dst (dests src))
-  (push src (sources dst)))
+  (! (push dst (dests src))
+     (push src (sources dst))))
 
 
 (defmethod choose-dest ((s sim) (b bag) (o obj))
@@ -203,11 +208,14 @@
 
 
 (defmethod access? ((s sim) (b bag) (o obj))
+  "Puo' sollevare gli errori `access-denied' e
+  `access-temporarily-unavailable'"
   t)
 
+
 (defmethod insert! ((b bag) (o obj))
-  (setf (elements b)
-	(append (elements b) (list o))))
+  (! (setf (elements b)
+	   (append (elements b) (list o)))))
 
 
 (defmethod remove! ((b bag))
@@ -215,9 +223,9 @@
 
 
 (defmethod end-flush! ((b bag))
-  (if (not (flush? b))
-      (error "end-flush! su bag non flushante")
-      (setf (flush? b) nil)))
+  (! (if (not (flush? b))
+	 (error "end-flush! su bag non flushante")
+       (setf (flush? b) nil))))
 
 
 (defmethod start-flush! ((b bag))
@@ -238,9 +246,8 @@
 
 
 (defmethod flush! ((b bag))
-  (if (flush? b)
-      (continue-flush! b)
-      (start-flush! b)))
+  (when (not (flush? b))
+    (start-flush! b)))
 
 
 (defmethod in! ((s sim) (b bag) (o obj))
