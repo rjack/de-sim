@@ -55,7 +55,8 @@
 
 
 (defgeneric setup-new! (obj))
-(defgeneric out! (sim bag obj))
+(defgeneric in! (sim bag obj))
+(defgeneric out! (sim bag))
 
 ;; Classes
 
@@ -180,6 +181,26 @@
      ,@body))
 
 
+;; METODI SIMULAZIONE
+
+
+(let ((clock 0))
+
+  (defun gettime! ()
+    clock)
+
+  (defmethod fire! ((ev event))
+    "Deve ritornare la lista di eventi generati da `event' oppure nil"
+    (setf clock (tm ev))
+    (setf (dead ev) t)
+    (funcall (fn ev))))
+
+
+(defmethod id= ((s1 sim) (s2 sim))
+  (= (id s1)
+     (id s2)))
+
+
 ;; METODI OBJ
 
 
@@ -236,11 +257,11 @@
 ;; Ci deve essere tempo solo tra `in!' e il successivo `out'.
 
 (defmethod next-out-time ((s sim) (b bag))
-  (gettime))
+  (gettime!))
 
 
 (defmethod in! ((s sim) (b bag) (o obj))
-  (! (insert! b o))
+  (! (insert! b o)))
 
 
 (defmethod in! ((s sim) (b fbag) (o obj))
@@ -257,7 +278,7 @@
   (let* ((o (remove! b))
 	 (dst (choose-dest s b o)))
     (access? (owner dst) dst o)
-    (list (new 'event :tm (gettime) :owner-id (id s)
+    (list (new 'event :tm (gettime!) :owner-id (id s)
 	       :fn (lambda ()
 		     (in! s b o))))))
 
@@ -272,23 +293,3 @@
 		   :fn (lambda ()
 			 (out! s b)))
 	      evs))))
-
-
-;; METODI SIMULAZIONE
-
-
-(let ((clock 0))
-
-  (defun gettime! ()
-    clock)
-
-  (defmethod fire! ((ev event))
-    "Deve ritornare la lista di eventi generati da `event' oppure nil"
-    (setf clock (tm ev))
-    (setf (dead ev) t)
-    (funcall (fn ev))))
-
-
-(defmethod id= ((s1 sim) (s2 sim))
-  (= (id s1)
-     (id s2)))
