@@ -69,6 +69,7 @@
 
 (defclass event (obj)
   ((owner-id :initarg :owner-id :accessor owner-id)
+   ;; dead = t significa: firato oppure annullato
    (tm       :initarg :tm       :accessor tm)
    (fn       :initarg :fn       :accessor fn)))
 
@@ -284,6 +285,7 @@
   (defmethod fire! ((ev event))
     "Deve ritornare la lista di eventi generati da `event' oppure nil"
     (setf clock (tm ev))
+    (setf (dead ev) t)
     (funcall (fn ev))))
 
 
