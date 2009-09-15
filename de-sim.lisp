@@ -80,10 +80,13 @@
 (defclass bag (obj)
   ((owner    :initarg :owner    :accessor owner    :type sim)
    (lock?    :initarg :lock?    :accessor lock?    :type boolean)
-   (flush?   :initarg :flush?   :accessor flush?   :type boolean)
    (elements :initarg :elements :accessor elements :type list)
    (sources  :initarg :sources  :accessor sources  :type list)
    (dests    :initarg :dests    :accessor dests    :type list)))
+
+
+(defclass fbag (bag)
+  ((flush?   :initarg :flush?   :accessor flush?   :type boolean)))
 
 
 (defclass scenario (sim)
@@ -213,6 +216,10 @@
   t)
 
 
+(defmethod empty? ((b bag))
+  (null (elements b)))
+
+
 (defmethod insert! ((b bag) (o obj))
   (! (setf (elements b)
 	   (append (elements b) (list o)))))
@@ -222,46 +229,48 @@
   (pop (elements b)))
 
 
-(defmethod end-flush! ((b bag))
-  (! (if (not (flush? b))
-	 (error "end-flush! su bag non flushante")
-       (setf (flush? b) nil))))
 
+;; Tra un `out!' e il successivo `in!'  non ci deve essere tempo in
+;; mezzo: altrimenti in quel tempo l'oggetto e' sospeso nel NULLA.
+;; Ci deve essere tempo solo tra `in!' e il successivo `out'.
 
-(defmethod start-flush! ((b bag))
-  (setf (flush? b) t)
-  (let ((o (remove! b)))
-    (if (null o)
-	(error "start-flush! su bag vuota")
-	(out! (owner b) b o))))
-
-
-(defmethod continue-flush! ((b bag))
-  (if (not (flush? b))
-      (error "continue-flush! su bag non flushante")
-      (let ((o (remove! b)))
-	(if (null o)
-	    (end-flush! b)
-	    (out! (owner b) b o)))))
-
-
-(defmethod flush! ((b bag))
-  (when (not (flush? b))
-    (start-flush! b)))
+(defmethod next-out-time ((s sim) (b bag))
+  (gettime))
 
 
 (defmethod in! ((s sim) (b bag) (o obj))
-    (insert! b o)
-    (flush! b))
+  (! (insert! b o))
 
 
-(defmethod out! ((s sim) (b bag) (o obj))
-    (let ((dst (choose-dest s b o)))
-      (access? (owner dst) dst o))
-    ;; TODO FIXME!
-    ;; chiamata a in! deve essere un nuovo evento
-    ;; quindi due eventi, contando anche il continue-flush!
-    (in! s b o))
+(defmethod in! ((s sim) (b fbag) (o obj))
+  (call-next-method s b o)
+  (when (not (flush? b))
+    (setf (flush? b) t)
+    (list (new 'event :owner-id (id s)
+	       :tm (next-out-time s b)
+	       :fn (lambda ()
+		     (out! s b))))))
+
+
+(defmethod out! ((s sim) (b bag))
+  (let* ((o (remove! b))
+	 (dst (choose-dest s b o)))
+    (access? (owner dst) dst o)
+    (list (new 'event :tm (gettime) :owner-id (id s)
+	       :fn (lambda ()
+		     (in! s b o))))))
+
+
+(defmethod out! ((s sim) (b fbag))
+  (let ((evs (call-next-method s b)))
+    (if (empty? b)
+	(progn
+	  (setf (flush? b) nil)
+	  evs)
+        (cons (new 'event :owner-id (id s) :tm (next-out-time s b)
+		   :fn (lambda ()
+			 (out! s b)))
+	      evs))))
 
 
 ;; METODI SIMULAZIONE
@@ -272,32 +281,12 @@
   (defun gettime! ()
     clock)
 
-  (defmethod fire! ((s sim) (ev event))
+  (defmethod fire! ((ev event))
+    "Deve ritornare la lista di eventi generati da `event' oppure nil"
     (setf clock (tm ev))
-    (funcall (fn ev) s)))
+    (funcall (fn ev))))
 
 
 (defmethod id= ((s1 sim) (s2 sim))
   (= (id s1)
      (id s2)))
-
-
-#|
-fire!
-  in!
-    insert!
-    flush!
-      start-flush!
-        out!
-          choose-dest
-          access?
-            wait
-              new event (se retry in tot tempo)
-              oppure nil
-          new events (in! e continue-flush!)
-
-fire!
-  continue-flush!
-    end-flush! -> nil
-    oppure out! (vedi sopra)
-#|
