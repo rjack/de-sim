@@ -51,12 +51,23 @@
 ;; restarts
 
 (defun wait (c)
-  (declare (ignore c)))
+  (declare (ignore c))
+  (invoke-restart 'wait))
 
 
 (defgeneric setup-new! (obj))
+(defgeneric connect! (bag-src bag-dst))
+(defgeneric choose-dest (sim bag obj))
+(defgeneric access? (sim bag obj))
+(defgeneric wakeup! (sim bag))
+(defgeneric empty? (bag))
+(defgeneric peek (bag))
+(defgeneric insert! (bag obj))
+(defgeneric remove! (bag))
+(defgeneric next-out-time (sim bag))
 (defgeneric in! (sim bag obj))
 (defgeneric out! (sim bag))
+(defgeneric id= (obj obj))
 
 ;; Classes
 
@@ -82,6 +93,7 @@
 (defclass bag (obj)
   ((owner    :initarg :owner    :accessor owner    :type sim)
    (lock?    :initarg :lock?    :accessor lock?    :type boolean)
+   (wait?    :initarg :wait?    :accessor wait?    :type boolean)
    (elements :initarg :elements :accessor elements :type list)
    (sources  :initarg :sources  :accessor sources  :type list)
    (dests    :initarg :dests    :accessor dests    :type list)))
@@ -91,9 +103,16 @@
   ((flush?   :initarg :flush?   :accessor flush?   :type boolean)))
 
 
+(defclass a2b-fbag (fbag)
+  nil)
+
+(defclass b2a-fbag (fbag)
+  nil)
+
+
 (defclass ln-> (sim)
   ((a-id     :initarg :a-id     :accessor a-id)
-   (a2bq     :initarg :a2bq     :accessor a2bq :type bag)
+   (a2b      :initarg :a2b      :accessor a2b      :type a2b-fbag)
    (bw       :initarg :bw       :accessor bw)
    (err-rate :initarg :err-rate :accessor err-rate)
    (delay    :initarg :delay    :accessor delay)))
@@ -101,7 +120,7 @@
 
 (defclass ln<-> (ln->)
   ((b-id     :initarg :b-id     :accessor b-id)
-   (b2aq     :initarg :b2aq     :accessor b2aq :type bag)))
+   (b2a      :initarg :b2a      :accessor b2a      :type b2a-fbag)))
 
 
 (defclass ln<=> (ln<->)
@@ -201,9 +220,10 @@
     (! (setf evs (stable-sort (cons ev evs)
 			      #'< :key #'tm)))))
 
-(defmethod id= ((s1 sim) (s2 sim))
-  (= (id s1)
-     (id s2)))
+
+(defmethod id= ((o1 obj) (o2 obj))
+  (= (id o1)
+     (id o2)))
 
 
 ;; METODI OBJ
@@ -218,14 +238,19 @@
 
 ;; METODI BAG
 
-(defmethod setup-new! :around ((b bag))
-  (with-slots (lock? flush? elements sources dests) b
+(defmethod setup-new! ((b bag))
+  (with-slots (lock? wait? elements sources dests) b
     (setf lock? nil)
-    (setf flush? nil)
+    (setf wait? nil)
     (setf elements (list))
     (setf sources (list))
     (setf dests (list)))
-  (call-next-method))
+  (call-next-method b))
+
+
+(defmethod setup-new! ((b fbag))
+  (setf (flush? b) nil)
+  (call-next-method b))
 
 
 (defmethod connect! ((src bag) (dst bag))
@@ -243,8 +268,22 @@
   t)
 
 
+(defmethod access? :around ((s sim) (b fbag) (o obj))
+  (restart-case (call-next-method s b o)
+    (wait ()
+      (! (setf (wait? b) t)))))
+
+
+(defmethod wakeup! ((s sim) (b bag))
+  (out! s b))
+
+
 (defmethod empty? ((b bag))
   (null (elements b)))
+
+
+(defmethod peek ((b bag))
+  (first (elements b)))
 
 
 (defmethod insert! ((b bag) (o obj))
@@ -280,13 +319,15 @@
 
 
 (defmethod out! ((s sim) (b bag))
-  (let* ((o (remove! b))
+  (let* ((o (peek b))
 	 (dst-bag (choose-dest s b o))
 	 (dst-sim (owner dst-bag)))
     (access? dst-sim dst-bag o)
-    (schedule! (new 'event :tm (gettime!) :owner-id (id dst-sim)
-		    :fn (lambda ()
-			  (in! dst-sim dst-bag o))))))
+    (let ((o (remove! b)))
+      (schedule! (new 'event :tm (gettime!)
+		      :owner-id (id dst-sim)
+		      :fn (lambda ()
+			    (in! dst-sim dst-bag o)))))))
 
 
 (defmethod out! ((s sim) (b fbag))
