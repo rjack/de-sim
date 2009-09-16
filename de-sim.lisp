@@ -65,12 +65,12 @@
 (defclass obj ()
   ((id       :initarg :id       :accessor id)
    ;; vero se l'oggetto deve essere considerato "morto"
-   (dead     :initarg :dead     :accessor dead)))
+   (dead?    :initarg :dead?    :accessor dead?)))
 
 
 (defclass event (obj)
   ((owner-id :initarg :owner-id :accessor owner-id)
-   ;; dead = t significa: firato oppure annullato
+   ;; dead? = t significa: firato oppure annullato
    (tm       :initarg :tm       :accessor tm)
    (fn       :initarg :fn       :accessor fn)))
 
@@ -89,10 +89,6 @@
 
 (defclass fbag (bag)
   ((flush?   :initarg :flush?   :accessor flush?   :type boolean)))
-
-
-(defclass scenario (sim)
-  nil)
 
 
 (defclass ln-> (sim)
@@ -184,17 +180,26 @@
 ;; METODI SIMULAZIONE
 
 
-(let ((clock 0))
+(let ((clock 0)
+      (evs (list)))
 
   (defun gettime! ()
     clock)
 
-  (defmethod fire! ((ev event))
+  (defun fire! ()
     "Deve ritornare la lista di eventi generati da `event' oppure nil"
-    (setf clock (tm ev))
-    (setf (dead ev) t)
-    (funcall (fn ev))))
+    (let ((ev (pop evs)))
+      (! (if (dead? ev)
+	     (fire!)
+	     (progn
+	       (setf clock (tm ev))
+	       (setf (dead? ev) t)
+	       (funcall (fn ev)))))))
 
+  (defun schedule! (ev)
+    (declare (event ev))
+    (! (setf evs (stable-sort (cons ev evs)
+			      #'< :key #'tm)))))
 
 (defmethod id= ((s1 sim) (s2 sim))
   (= (id s1)
@@ -205,9 +210,9 @@
 
 
 (defmethod setup-new! ((o obj))
-  (with-slots (id dead) o
+  (with-slots (id dead?) o
     (setf id (genid!))
-    (setf dead nil))
+    (setf dead? nil))
   o)
 
 
