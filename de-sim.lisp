@@ -276,11 +276,12 @@
 
 (defmethod out! ((s sim) (b bag))
   (let* ((o (remove! b))
-	 (dst (choose-dest s b o)))
-    (access? (owner dst) dst o)
-    (list (new 'event :tm (gettime!) :owner-id (id s)
+	 (dst-bag (choose-dest s b o))
+	 (dst-sim (owner dst-bag)))
+    (access? dst-sim dst-bag o)
+    (list (new 'event :tm (gettime!) :owner-id (id dst-sim)
 	       :fn (lambda ()
-		     (in! s b o))))))
+		     (in! dst-sim dst-bag o))))))
 
 
 (defmethod out! ((s sim) (b fbag))
