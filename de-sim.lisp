@@ -203,6 +203,9 @@
 (let ((clock 0)
       (evs (list)))
 
+  (defun events! ()
+    evs)
+
   (defun gettime! ()
     clock)
 
