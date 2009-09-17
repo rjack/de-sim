@@ -142,6 +142,16 @@
 	  (sb-mop::class-slots (class-of instance))))
 
 
+(defun print-slots (object &optional (stream *standard-output*))
+  (let ((slots (list-slots object)))
+    (dolist (sl slots)
+      (format stream
+	      ":~a ~a~%"
+	      (string-downcase sl)
+	      (if (slot-boundp object sl)
+		  (slot-value object sl)
+		  "unbound")))))
+
 (defun ht->list (ht)
   (declare (hash-table ht))
   (loop
