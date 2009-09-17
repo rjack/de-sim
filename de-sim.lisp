@@ -218,7 +218,7 @@
 
   (defun schedule! (ev)
     (declare (event ev))
-    (! (setf evs (stable-sort (cons ev evs)
+    (! (setf evs (stable-sort (append evs (list ev))
 			      #'< :key #'tm)))))
 
 
