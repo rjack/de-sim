@@ -222,12 +222,14 @@
   (defun fire! ()
     "Deve ritornare la lista di eventi generati da `event' oppure nil"
     (let ((ev (pop evs)))
-      (! (if (dead? ev)
-	     (fire!)
-	     (progn
-	       (setf clock (tm ev))
-	       (setf (dead? ev) t)
-	       (funcall (fn ev)))))))
+      (if (null ev)
+	  (error "No events")
+	  (! (if (dead? ev)
+		 (fire!)
+		 (progn
+		   (setf clock (tm ev))
+		   (setf (dead? ev) t)
+		   (funcall (fn ev))))))))
 
   (defun schedule! (ev)
     (declare (event ev))
