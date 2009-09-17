@@ -76,7 +76,8 @@
 (defclass obj ()
   ((id       :initarg :id       :accessor id)
    ;; vero se l'oggetto deve essere considerato "morto"
-   (dead?    :initarg :dead?    :accessor dead?)))
+   (dead?    :initarg :dead?    :accessor dead?)
+   (name     :initarg :name     :accessor name     :type string)))
 
 
 (defclass event (obj)
@@ -229,10 +230,21 @@
 ;; METODI OBJ
 
 
+(defmethod print-object ((o obj) stream)
+  (print-unreadable-object (o stream :type nil)
+    (format stream "~a" (name o))))
+
+
 (defmethod setup-new! ((o obj))
   (with-slots (id dead?) o
     (setf id (genid!))
     (setf dead? nil))
+  (when (not (slot-boundp o 'name))
+    (setf (name o)
+	  (concatenate 'string
+		       (string (type-of o))
+		       "-"
+		       (write-to-string (id o)))))
   o)
 
 
