@@ -48,6 +48,10 @@
   nil)
 
 
+(define-condition empty-bag (error)
+  nil)
+
+
 ;; restarts
 
 (defun wait (c)
@@ -68,6 +72,7 @@
 (defgeneric in! (sim bag obj))
 (defgeneric out! (sim bag))
 (defgeneric id= (obj obj))
+(defgeneric size (obj))
 
 ;; Classes
 
@@ -112,16 +117,14 @@
 
 
 (defclass ln-> (sim)
-  ((a-id     :initarg :a-id     :accessor a-id)
-   (a2b      :initarg :a2b      :accessor a2b      :type a2b-fbag)
+  ((a2b      :initarg :a2b      :accessor a2b      :type a2b-fbag)
    (bw       :initarg :bw       :accessor bw)
    (err-rate :initarg :err-rate :accessor err-rate)
    (delay    :initarg :delay    :accessor delay)))
 
 
 (defclass ln<-> (ln->)
-  ((b-id     :initarg :b-id     :accessor b-id)
-   (b2a      :initarg :b2a      :accessor b2a      :type b2a-fbag)))
+  ((b2a      :initarg :b2a      :accessor b2a      :type b2a-fbag)))
 
 
 (defclass ln<=> (ln<->)
@@ -263,6 +266,10 @@
   o)
 
 
+(defmethod size ((o obj))
+  (error 'not-implemented))
+
+
 ;; METODI BAG
 
 (defmethod setup-new! ((b bag))
@@ -310,7 +317,9 @@
 
 
 (defmethod peek ((b bag))
-  (first (elements b)))
+  (if (empty? b)
+      (error 'empty-bag)
+      (first (elements b))))
 
 
 (defmethod insert! ((b bag) (o obj))
@@ -319,7 +328,9 @@
 
 
 (defmethod remove! ((b bag))
-  (pop (elements b)))
+  (if (empty? b)
+      (error 'empty-bag)
+      (pop (elements b))))
 
 
 
@@ -365,3 +376,37 @@
 		      :tm (next-out-time s b)
 		      :fn (lambda ()
 			    (out! s b))))))
+
+
+;; METODI LN->
+
+(defmethod setup-new! ((ln ln->))
+  (setf (a2b ln)
+	(new 'a2b-fbag :owner ln))
+  (when (not (slot-boundp ln 'bw))
+    (setf (bw ln) :infinite))
+  (when (not (slot-boundp ln 'err-rate))
+    (setf (err-rate ln) 0))
+  (when (not (slot-boundp ln 'delay))
+    (setf (delay ln) 0))
+  (call-next-method ln))
+
+
+(defmethod setup-new! ((ln ln<->))
+  (setf (b2a ln)
+	(new 'b2a-fbag :owner ln))
+  (call-next-method ln))
+
+
+(defmethod next-out-time ((ln ln->) (b fbag))
+  (let ((o (peek b)))
+    (with-slots (bw delay) ln
+      (+ delay (if (eql :infinite bw)
+		   0
+		   (/ (size o) bw))))))
+
+
+(defmethod in! ((ln ln->) (b fbag) (o obj))
+  (when (< (random 100)
+	   (err-rate ln))
+    (call-next-method ln b o)))
