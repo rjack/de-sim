@@ -292,31 +292,28 @@
 ;; METODI SIMULAZIONE
 
 
-(let ((clock 0)
-      (evs (list)))
+(defparameter *clock* 0)
+(defparameter *evs* (list))
 
-  (defun events! ()
-    evs)
+(defun gettime! ()
+  *clock*)
 
-  (defun gettime! ()
-    clock)
+(defun fire! ()
+  "Deve ritornare la lista di eventi generati da `event' oppure nil"
+  (let ((ev (pop *evs*)))
+    (if (null ev)
+	(error "No events")
+	(! (if (dead? ev)
+	       (fire!)
+	       (progn
+		 (setf *clock* (tm ev))
+		 (setf (dead? ev) t)
+		 (funcall (fn ev))))))))
 
-  (defun fire! ()
-    "Deve ritornare la lista di eventi generati da `event' oppure nil"
-    (let ((ev (pop evs)))
-      (if (null ev)
-	  (error "No events")
-	  (! (if (dead? ev)
-		 (fire!)
-		 (progn
-		   (setf clock (tm ev))
-		   (setf (dead? ev) t)
-		   (funcall (fn ev))))))))
-
-  (defun schedule! (ev)
-    (declare (event ev))
-    (! (setf evs (stable-sort (append evs (list ev))
-			      #'< :key #'tm)))))
+(defun schedule! (ev)
+  (declare (event ev))
+  (! (setf *evs* (stable-sort (append *evs* (list ev))
+			      #'< :key #'tm))))
 
 
 (defmethod id= ((o1 obj) (o2 obj))
