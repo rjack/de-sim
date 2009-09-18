@@ -375,7 +375,9 @@
 (defmethod access? ((s sim) (b bag) (o obj))
   "Puo' sollevare gli errori `access-denied' e
   `access-temporarily-unavailable'"
-  t)
+  (if (lock? b)
+      (error 'access-temporarily-unavailable)
+      t))
 
 
 (defmethod access? :around ((s sim) (b fbag) (o obj))
