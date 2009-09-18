@@ -483,6 +483,6 @@
 
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
-  (when (< (random 100)
-	   (err-rate ln))
+  (when (not (< (random 100)
+		(err-rate ln)))
     (call-next-method ln b o)))
