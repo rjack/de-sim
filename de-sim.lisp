@@ -52,6 +52,18 @@
   nil)
 
 
+(define-condition no-destination (error)
+  nil)
+
+
+(define-condition access-denied (error)
+  nil)
+
+
+(define-condition access-temporarily-unavailable (error)
+  nil)
+
+
 ;; restarts
 
 (defun wait (c)
@@ -89,7 +101,8 @@
   ((owner-id :initarg :owner-id :accessor owner-id)
    ;; dead? = t significa: firato oppure annullato
    (tm       :initarg :tm       :accessor tm)
-   (fn       :initarg :fn       :accessor fn)))
+   (fn       :initarg :fn       :accessor fn)
+   (desc     :initarg :desc     :accessor desc)))
 
 
 (defclass sim (obj)
@@ -99,7 +112,8 @@
 (defclass bag (obj)
   ((owner    :initarg :owner    :accessor owner    :type sim)
    (lock?    :initarg :lock?    :accessor lock?    :type boolean)
-   (wait?    :initarg :wait?    :accessor wait?    :type boolean)
+   (waits?   :initarg :waits?   :accessor waits?   :type boolean)
+   (waiting? :initarg :waiting? :accessor waiting? :type boolean)
    (elements :initarg :elements :accessor elements :type list)
    (sources  :initarg :sources  :accessor sources  :type list)
    (dests    :initarg :dests    :accessor dests    :type list)))
@@ -308,6 +322,7 @@
 	       (progn
 		 (setf *clock* (tm ev))
 		 (setf (dead? ev) t)
+		 (format t "~a: ~a~%" *clock* ev)
 		 (funcall (fn ev))))))))
 
 (defun schedule! (ev)
@@ -320,6 +335,11 @@
   (= (id o1)
      (id o2)))
 
+
+
+(defmethod print-object ((ev event) stream)
+  (print-unreadable-object (ev stream :type nil)
+    (format stream "~a ~a" (name ev) (desc ev))))
 
 ;; METODI OBJ
 
@@ -349,9 +369,10 @@
 ;; METODI BAG
 
 (defmethod setup-new! ((b bag))
-  (with-slots (lock? wait? elements sources dests) b
+  (with-slots (lock? waits? waiting? elements sources dests) b
     (setf lock? nil)
-    (setf wait? nil)
+    (setf waits? nil)
+    (setf waiting? nil)
     (setf elements (list))
     (setf sources (list))
     (setf dests (list)))
@@ -383,10 +404,11 @@
 (defmethod access? :around ((s sim) (b fbag) (o obj))
   (restart-case (call-next-method s b o)
     (wait ()
-      (! (setf (wait? b) t)))))
+      (! (setf (waits? b) t)))))
 
 
 (defmethod wakeup! ((s sim) (b bag))
+  (setf (waiting? b) nil)
   (out! s b))
 
 
@@ -429,6 +451,7 @@
   (when (not (flush? b))
     (setf (flush? b) t)
     (schedule! (new 'event :owner-id (id s)
+		    :desc (format nil "out! ~a ~a" s b)
 		    :tm (next-out-time s b)
 		    :fn (lambda ()
 			  (out! s b))))))
@@ -438,22 +461,26 @@
   (let* ((o (peek b))
 	 (dst-bag (choose-dest s b o))
 	 (dst-sim (owner dst-bag)))
-    (access? dst-sim dst-bag o)
-    (let ((o (remove! b)))
-      (schedule! (new 'event :tm (gettime!)
-		      :owner-id (id dst-sim)
-		      :fn (lambda ()
-			    (in! dst-sim dst-bag o)))))))
+    (if (not (access? dst-sim dst-bag o))
+	(! (setf (waiting? b) t))
+	(let ((o (remove! b)))
+	  (schedule! (new 'event :tm (gettime!)
+			  :desc (format nil "in! ~a ~a ~a" dst-sim dst-bag o)
+			  :owner-id (id dst-sim)
+			  :fn (lambda ()
+				(in! dst-sim dst-bag o))))))))
 
 
 (defmethod out! ((s sim) (b fbag))
   (call-next-method s b)
   (if (empty? b)
       (! (setf (flush? b) nil))
-      (schedule! (new 'event :owner-id (id s)
-		      :tm (next-out-time s b)
-		      :fn (lambda ()
-			    (out! s b))))))
+      (when (not (waiting? b))
+	(schedule! (new 'event :owner-id (id s)
+			:desc (format nil "out! ~a ~a" s b)
+			:tm (next-out-time s b)
+			:fn (lambda ()
+			      (out! s b)))))))
 
 
 ;; METODI LN->
@@ -486,14 +513,18 @@
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
   (setf (lock? b) t)
-  (schedule! (new 'event :owner-id (id b)
-		  :tm (+ (gettime!)
-			 (/ (size o) (bw ln)))
-		  :fn (lambda ()
-			(! (setf (lock? b) nil)
-			   (when (wait? b)
-			     (let ((src (first (sources b))))
-			       (wakeup! (owner src) src)))))))
+  (if (> (length (sources b)) 1)
+      (error "Piu' di una source, come fa wakeup! a svegliare quella giusta?")
+      (let ((src (first (sources b))))
+	(schedule! (new 'event :owner-id (id b)
+			:desc (format nil "unlock ~a e wakeup! ~a" b src)
+				      :tm (+ (gettime!)
+					     (/ (size o) (bw ln)))
+				      :fn (lambda ()
+					    (! (setf (lock? b) nil)
+					       (when (waits? b)
+						 (setf (waits? b) nil)
+						 (wakeup! (owner src) src))))))))
   (when (not (< (random 100)
 		(err-rate ln)))
     (call-next-method ln b o)))
