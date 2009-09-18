@@ -477,9 +477,9 @@
 (defmethod next-out-time ((ln ln->) (b fbag))
   (let ((o (peek b)))
     (with-slots (bw delay) ln
-      (+ delay (if (eql :infinite bw)
-		   0
-		   (/ (size o) bw))))))
+      (+ (gettime!) delay (if (eql :infinite bw)
+			      0
+			      (/ (size o) bw))))))
 
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
