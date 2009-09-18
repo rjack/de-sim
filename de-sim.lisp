@@ -485,6 +485,15 @@
 
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
+  (setf (lock? b) t)
+  (schedule! (new 'event :owner-id (id b)
+		  :tm (+ (gettime!)
+			 (/ (size o) (bw ln)))
+		  :fn (lambda ()
+			(! (setf (lock? b) nil)
+			   (when (wait? b)
+			     (let ((src (first (sources b))))
+			       (wakeup! (owner src) src)))))))
   (when (not (< (random 100)
 		(err-rate ln)))
     (call-next-method ln b o)))
