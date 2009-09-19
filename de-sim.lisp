@@ -94,6 +94,7 @@
   ((id       :initarg :id       :accessor id)
    ;; vero se l'oggetto deve essere considerato "morto"
    (dead?    :initarg :dead?    :accessor dead?)
+   (tstamp   :initarg :tstamp   :accessor tstamp)
    (name     :initarg :name     :accessor name     :type string)))
 
 
@@ -350,9 +351,10 @@
 
 
 (defmethod setup-new! ((o obj))
-  (with-slots (id dead?) o
+  (with-slots (id dead? tstamp) o
     (setf id (genid!))
-    (setf dead? nil))
+    (setf dead? nil)
+    (setf tstamp (gettime!)))
   (when (not (slot-boundp o 'name))
     (setf (name o)
 	  (concatenate 'string
@@ -443,7 +445,8 @@
 
 
 (defmethod in! ((s sim) (b bag) (o obj))
-  (! (insert! b o)))
+  (! (setf (tstamp o) (gettime!))
+     (insert! b o)))
 
 
 (defmethod in! ((s sim) (b fbag) (o obj))
@@ -506,9 +509,11 @@
 (defmethod next-out-time ((ln ln->) (b fbag))
   (let ((o (peek b)))
     (with-slots (bw delay) ln
-      (+ (gettime!) delay (if (eql :infinite bw)
-			      0
-			      (/ (size o) bw))))))
+      (let ((trans-time (+ delay (if (eql :infinite bw)
+				     0
+				     (/ (size o) bw)))))
+	(+ (tstamp o)
+	   trans-time)))))
 
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
