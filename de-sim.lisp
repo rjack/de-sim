@@ -245,6 +245,18 @@
 		  (slot-value object sl)
 		  "unbound")))))
 
+
+(defun random-pick (lst &optional (random-state *random-state*))
+  "Contract: list random-state -> element
+
+   Purpose: to return one of the list element, choosing randomly."
+
+  (declare (list lst))
+  (nth (random (length lst)
+	       random-state)
+       lst))
+
+
 (defun ht->list (ht)
   (declare (hash-table ht))
   (loop
