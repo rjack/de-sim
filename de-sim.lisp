@@ -339,7 +339,7 @@
 
 (defmethod print-object ((ev event) stream)
   (print-unreadable-object (ev stream :type nil)
-    (format stream "~a ~a" (name ev) (desc ev))))
+    (format stream "~a @~a: ~a" (name ev) (tm ev) (desc ev))))
 
 ;; METODI OBJ
 
