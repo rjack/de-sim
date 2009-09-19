@@ -142,10 +142,6 @@
   ((b2a      :initarg :b2a      :accessor b2a      :type b2a-fbag)))
 
 
-(defclass ln<=> (ln<->)
-  nil)
-
-
 ;; utils
 
 (defun usecs (us)
