@@ -77,7 +77,7 @@
 
 (defgeneric setup-new! (obj))
 (defgeneric connect! (bag-src bag-dst))
-(defgeneric choose-dest (sim bag obj))
+(defgeneric choose-dest (sim bag obj &key selector))
 (defgeneric access? (sim bag obj))
 (defgeneric wakeup! (sim bag))
 (defgeneric empty? (bag))
@@ -403,8 +403,13 @@
      (push src (sources dst))))
 
 
-(defmethod choose-dest ((s sim) (b bag) (o obj))
-  (first (dests b)))
+(defmethod choose-dest ((s sim) (b bag) (o obj)
+			&key (selector (lambda (dests)
+					 (first dests))))
+  (let ((dst (funcall selector (dests b))))
+    (if (null dst)
+	(error 'no-destination)
+	dst)))
 
 
 (defmethod access? ((s sim) (b bag) (o obj))
