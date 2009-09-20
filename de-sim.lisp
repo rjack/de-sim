@@ -82,8 +82,8 @@
 (defgeneric wakeup! (sim bag))
 (defgeneric empty? (bag))
 (defgeneric peek (bag))
-(defgeneric insert! (bag obj))
-(defgeneric remove! (bag))
+(defgeneric insert! (bag obj &key))
+(defgeneric remove! (bag &key))
 (defgeneric lock! (bag))
 (defgeneric unlock! (bag))
 (defgeneric next-out-time (sim bag))
@@ -443,12 +443,12 @@
       (first (elements b))))
 
 
-(defmethod insert! ((b bag) (o obj))
+(defmethod insert! ((b bag) (o obj) &key)
   (! (setf (elements b)
 	   (append (elements b) (list o)))))
 
 
-(defmethod remove! ((b bag))
+(defmethod remove! ((b bag) &key)
   (if (empty? b)
       (error 'empty-bag)
       (pop (elements b))))
