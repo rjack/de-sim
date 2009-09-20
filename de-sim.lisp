@@ -489,6 +489,10 @@
 
 
 (defmethod out! ((s sim) (b bag) dst-bag dst-sim)
+  (when (and (eq t dst-bag)
+	     (eq t dst-sim))
+    (setf dst-bag (default-dest s b))
+    (setf dst-sim (owner dst-bag)))
   (if (not (access? dst-sim dst-bag (peek b)))
       (! (setf (waiting? b) t))
       (let ((o (remove! b)))
@@ -562,8 +566,3 @@
   (when (not (< (random 100)
 		(err-rate ln)))
     (call-next-method)))
-
-
-(defmethod out! ((ln ln->) (b fbag) dst-bag dst-sim)
-  (let ((dst (default-dest ln b)))
-    (call-next-method ln b dst (owner dst))))
