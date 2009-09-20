@@ -77,9 +77,9 @@
 
 (defgeneric setup-new! (obj))
 (defgeneric connect! (bag-src bag-dst))
-(defgeneric choose-dest (sim bag obj &key selector))
+(defgeneric default-dest (sim bag))
 (defgeneric access? (sim bag obj))
-(defgeneric wakeup! (sim bag))
+(defgeneric wakeup! (sim bag dst-bag dst-sim))
 (defgeneric empty? (bag))
 (defgeneric peek (bag))
 (defgeneric insert! (bag obj &key))
@@ -87,8 +87,8 @@
 (defgeneric lock! (bag))
 (defgeneric unlock! (bag))
 (defgeneric next-out-time (sim bag))
-(defgeneric in! (sim bag obj))
-(defgeneric out! (sim bag))
+(defgeneric in! (sim bag obj dst-bag dst-sim))
+(defgeneric out! (sim bag dst-bag dst-sim))
 (defgeneric id= (obj obj))
 (defgeneric size (obj))
 
@@ -405,13 +405,10 @@
      (push src (sources dst))))
 
 
-(defmethod choose-dest ((s sim) (b bag) (o obj)
-			&key (selector (lambda (dests)
-					 (first dests))))
-  (let ((dst (funcall selector (dests b))))
-    (if (null dst)
-	(error 'no-destination)
-	dst)))
+(defmethod default-dest ((s sim) (b bag))
+  (if (null (dests b))
+      (error 'no-destination)
+      (first (dests b))))
 
 
 (defmethod access? ((s sim) (b bag) (o obj))
@@ -428,9 +425,9 @@
       (! (setf (waits? b) t)))))
 
 
-(defmethod wakeup! ((s sim) (b bag))
+(defmethod wakeup! ((s sim) (b bag) dst-bag dst-sim)
   (setf (waiting? b) nil)
-  (out! s b))
+  (out! s b dst-bag dst-sim))
 
 
 (defmethod empty? ((b bag))
@@ -475,46 +472,47 @@
   (gettime!))
 
 
-(defmethod in! ((s sim) (b bag) (o obj))
+(defmethod in! ((s sim) (b bag) (o obj) dst-bag dst-sim)
   (! (setf (ts o) (gettime!))
      (insert! b o)))
 
 
-(defmethod in! ((s sim) (b fbag) (o obj))
-  (call-next-method s b o)
+(defmethod in! ((s sim) (b fbag) (o obj) dst-bag dst-sim)
+  (call-next-method)
   (when (not (flush? b))
     (setf (flush? b) t)
     (schedule! (new 'event :owner-id (id s)
-		    :desc (format nil "out! ~a ~a" s b)
+		    :desc (format nil "out! ~a ~a ~a ~a" s b dst-bag dst-sim)
 		    :tm (next-out-time s b)
 		    :fn (lambda ()
-			  (out! s b))))))
+			  (out! s b dst-bag dst-sim))))))
 
 
-(defmethod out! ((s sim) (b bag))
-  (let* ((o (peek b))
-	 (dst-bag (choose-dest s b o))
-	 (dst-sim (owner dst-bag)))
-    (if (not (access? dst-sim dst-bag o))
-	(! (setf (waiting? b) t))
-	(let ((o (remove! b)))
-	  (schedule! (new 'event :tm (gettime!)
-			  :desc (format nil "in! ~a ~a ~a" dst-sim dst-bag o)
-			  :owner-id (id dst-sim)
-			  :fn (lambda ()
-				(in! dst-sim dst-bag o))))))))
+(defmethod out! ((s sim) (b bag) dst-bag dst-sim)
+  (if (not (access? dst-sim dst-bag (peek b)))
+      (! (setf (waiting? b) t))
+      (let ((o (remove! b)))
+	(schedule!
+	 (new 'event :tm (gettime!)
+	      :desc (format nil "in! ~a ~a ~a ~a ~a" dst-sim dst-bag o t t)
+	      :owner-id (id dst-sim)
+	      :fn (lambda ()
+		    (in! dst-sim dst-bag o t t)))))))
 
 
-(defmethod out! ((s sim) (b fbag))
-  (call-next-method s b)
+(defmethod out! ((s sim) (b fbag) dst-bag dst-sim)
+  (call-next-method)
   (if (empty? b)
       (! (setf (flush? b) nil))
       (when (not (waiting? b))
 	(schedule! (new 'event :owner-id (id s)
-			:desc (format nil "out! ~a ~a" s b)
+			:desc (format nil "out! ~a ~a ~a ~a" s b t t)
 			:tm (next-out-time s b)
 			:fn (lambda ()
-			      (out! s b)))))))
+			      ;; le destinazioni sono t t perche'
+			      ;; devono essere decise nuovamente dal
+			      ;; metodo specializzante.
+			      (out! s b t t)))))))
 
 
 ;; METODI LN->
@@ -528,13 +526,13 @@
     (setf (err-rate ln) 0))
   (when (not (slot-boundp ln 'delay))
     (setf (delay ln) 0))
-  (call-next-method ln))
+  (call-next-method))
 
 
 (defmethod setup-new! ((ln ln<->))
   (setf (b2a ln)
 	(new 'b2a-fbag :owner ln))
-  (call-next-method ln))
+  (call-next-method))
 
 
 (defmethod next-out-time ((ln ln->) (b fbag))
@@ -547,20 +545,25 @@
 	   trans-time)))))
 
 
-(defmethod in! ((ln ln->) (b fbag) (o obj))
+(defmethod in! ((ln ln->) (b fbag) (o obj) dst-bag dst-sim)
   (lock! b)
   (if (> (length (sources b)) 1)
       (error "Piu' di una source, come fa wakeup! a svegliare quella giusta?")
       (let ((src (first (sources b))))
 	(schedule! (new 'event :owner-id (id b)
 			:desc (format nil "unlock ~a e wakeup! ~a" b src)
-				      :tm (+ (gettime!)
-					     (/ (size o) (bw ln)))
-				      :fn (lambda ()
-					    (unlock! b)
-					    (when (waits? b)
-					      (setf (waits? b) nil)
-					      (wakeup! (owner src) src)))))))
+			:tm (+ (gettime!)
+			       (/ (size o) (bw ln)))
+			:fn (lambda ()
+			      (unlock! b)
+			      (when (waits? b)
+				(setf (waits? b) nil)
+				(wakeup! (owner src) src t t)))))))
   (when (not (< (random 100)
 		(err-rate ln)))
-    (call-next-method ln b o)))
+    (call-next-method)))
+
+
+(defmethod out! ((ln ln->) (b fbag) dst-bag dst-sim)
+  (let ((dst (default-dest ln b)))
+    (call-next-method ln b dst (owner dst))))
