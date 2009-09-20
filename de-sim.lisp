@@ -228,10 +228,10 @@
 
 
 
-(let ((id -1))
+(defparameter *id* -1)
 
-  (defun genid! ()
-    (incf id)))
+(defun genid! ()
+  (incf *id*))
 
 
 (defun list-slots (instance)
