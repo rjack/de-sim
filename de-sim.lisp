@@ -84,6 +84,8 @@
 (defgeneric peek (bag))
 (defgeneric insert! (bag obj))
 (defgeneric remove! (bag))
+(defgeneric lock! (bag))
+(defgeneric unlock! (bag))
 (defgeneric next-out-time (sim bag))
 (defgeneric in! (sim bag obj))
 (defgeneric out! (sim bag))
@@ -452,6 +454,18 @@
       (pop (elements b))))
 
 
+(defmethod lock! ((b bag))
+  (if (lock? b)
+      (error "bag gia' lockata!")
+      (! (setf (lock? b) t))))
+
+
+(defmethod unlock! ((b bag))
+  (if (not (lock? b))
+      (error "bag gia' unlockata!")
+      (! (setf (lock? b) nil))))
+
+
 
 ;; Tra un `out!' e il successivo `in!'  non ci deve essere tempo in
 ;; mezzo: altrimenti in quel tempo l'oggetto e' sospeso nel NULLA.
@@ -534,7 +548,7 @@
 
 
 (defmethod in! ((ln ln->) (b fbag) (o obj))
-  (setf (lock? b) t)
+  (lock! b)
   (if (> (length (sources b)) 1)
       (error "Piu' di una source, come fa wakeup! a svegliare quella giusta?")
       (let ((src (first (sources b))))
@@ -543,10 +557,10 @@
 				      :tm (+ (gettime!)
 					     (/ (size o) (bw ln)))
 				      :fn (lambda ()
-					    (! (setf (lock? b) nil)
-					       (when (waits? b)
-						 (setf (waits? b) nil)
-						 (wakeup! (owner src) src))))))))
+					    (unlock! b)
+					    (when (waits? b)
+					      (setf (waits? b) nil)
+					      (wakeup! (owner src) src)))))))
   (when (not (< (random 100)
 		(err-rate ln)))
     (call-next-method ln b o)))
