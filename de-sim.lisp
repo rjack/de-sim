@@ -52,6 +52,10 @@
   nil)
 
 
+(define-condition no-events (error)
+  nil)
+
+
 (define-condition no-destination (error)
   nil)
 
@@ -325,7 +329,7 @@
   "Deve ritornare la lista di eventi generati da `event' oppure nil"
   (let ((ev (pop *evs*)))
     (if (null ev)
-	(error "No events")
+	(error 'no-events)
 	(! (if (dead? ev)
 	       (fire!)
 	       (progn
