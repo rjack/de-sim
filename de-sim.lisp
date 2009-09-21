@@ -75,6 +75,8 @@
   (invoke-restart 'wait))
 
 
+(defgeneric clone (obj))
+(defgeneric transform! (copy original))
 (defgeneric setup-new! (obj))
 (defgeneric connect! (bag-src bag-dst))
 (defgeneric default-dest (sim bag))
@@ -311,18 +313,6 @@
       (setf (slot-value obj slot-symbol)
 	    value))))
 
-
-(defun clone (obj &rest slot-value-plist)
-  (let ((obj-copy (apply #'modify!
-			 (make-instance (class-of obj))
-			 slot-value-plist)))
-    (dolist (slot-name (list-slots obj) obj-copy)
-      (when (and (slot-boundp obj slot-name)
-		 (not (slot-boundp obj-copy slot-name)))
-	(setf (slot-value obj-copy slot-name)
-	      (slot-value obj slot-name))))))
-
-
 (defmacro with-gensyms ((&rest names) &body body)
   "Stolen from Practical Common Lisp."
   `(let ,(loop for n in names collect `(,n (gensym)))
@@ -368,6 +358,16 @@
     (format stream "~a @~a: ~a" (name ev) (tm ev) (desc ev))))
 
 ;; METODI OBJ
+
+(defmethod clone ((o obj))
+  (let ((obj-copy (make-instance (class-of o))))
+    (transform! obj-copy o)))
+
+(defmethod transform! ((copy obj) (original obj))
+  (dolist (slot-name (list-slots original) copy)
+    (when (slot-boundp original slot-name)
+      (setf (slot-value copy slot-name)
+	    (slot-value original slot-name)))))
 
 
 (defmethod print-object ((o obj) stream)
