@@ -274,6 +274,17 @@
   `(setup-new! (make-instance ,class-name ,@body)))
 
 
+(defmacro set-unbound-slots (instance &body forms)
+  `(progn
+    ,@(mapcar (lambda (sexp)
+		(let ((slot-name (first sexp)))
+		  `(when (not (slot-boundp ,instance ',slot-name))
+		    (setf (slot-value ,instance ',slot-name)
+		     ,(second sexp)))))
+	      forms)
+    nil))
+
+
 (defmacro ! (&body body)
   `(progn
      ,@body
