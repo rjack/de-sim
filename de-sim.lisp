@@ -376,13 +376,11 @@
 
 
 (defmethod setup-new! ((o obj))
-  (with-slots (id dead? ts) o
-    (setf id (genid!))
-    (setf dead? nil)
-    (setf ts (gettime!)))
-  (when (not (slot-boundp o 'name))
-    (setf (name o)
-	  (concatenate 'string
+  (set-unbound-slots o
+    (id (genid!))
+    (dead? nil)
+    (ts (gettime!))
+    (name (concatenate 'string
 		       (string (type-of o))
 		       "-"
 		       (write-to-string (id o)))))
@@ -396,18 +394,19 @@
 ;; METODI BAG
 
 (defmethod setup-new! ((b bag))
-  (with-slots (lock? waits? waiting? elements sources dests) b
-    (setf lock? nil)
-    (setf waits? nil)
-    (setf waiting? nil)
-    (setf elements (list))
-    (setf sources (list))
-    (setf dests (list)))
+  (set-unbound-slots b
+    (lock? nil)
+    (waits? nil)
+    (waiting? nil)
+    (elements (list))
+    (sources (list))
+    (dests (list)))
   (call-next-method b))
 
 
 (defmethod setup-new! ((b fbag))
-  (setf (flush? b) nil)
+  (set-unbound-slots b
+    (flush? nil))
   (call-next-method b))
 
 
@@ -533,20 +532,17 @@
 ;; METODI LN->
 
 (defmethod setup-new! ((ln ln->))
-  (setf (a2b ln)
-	(new 'a2b-fbag :owner ln))
-  (when (not (slot-boundp ln 'bw))
-    (setf (bw ln) :infinite))
-  (when (not (slot-boundp ln 'err-rate))
-    (setf (err-rate ln) 0))
-  (when (not (slot-boundp ln 'delay))
-    (setf (delay ln) 0))
+  (set-unbound-slots ln
+    (a2b (new 'a2b-fbag :owner ln))
+    (bw :infinite)
+    (err-rate ln 0)
+    (delay 0))
   (call-next-method))
 
 
 (defmethod setup-new! ((ln ln<->))
-  (setf (b2a ln)
-	(new 'b2a-fbag :owner ln))
+  (set-unbound-slots ln
+    (b2a (new 'b2a-fbag :owner ln)))
   (call-next-method))
 
 
