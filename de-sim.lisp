@@ -343,7 +343,7 @@
 
 (defun schedule! (ev)
   (declare (event ev))
-  (! (setf *evs* (stable-sort (append *evs* (list ev))
+  (! (setf *evs* (stable-sort (nconc *evs* (list ev))
 			      #'< :key #'tm))))
 
 
