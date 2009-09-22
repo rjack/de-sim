@@ -478,7 +478,7 @@
 ;; mezzo: altrimenti in quel tempo l'oggetto e' sospeso nel NULLA.
 ;; Ci deve essere tempo solo tra `in!' e il successivo `out'.
 
-(defmethod next-out-time ((s sim) (b bag))
+(defmethod next-out-time ((s sim) (b fbag))
   (gettime!))
 
 
