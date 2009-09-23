@@ -542,7 +542,7 @@
   (set-unbound-slots ln
     (a2b (new 'a2b-fbag :owner ln))
     (bw :infinite)
-    (err-rate ln 0)
+    (err-rate 0)
     (delay 0))
   (call-next-method))
 
@@ -571,7 +571,9 @@
 	(schedule! (new 'event :owner-id (id b)
 			:desc (format nil "unlock ~a e wakeup! ~a" b src)
 			:tm (+ (gettime!)
-			       (/ (size o) (bw ln)))
+			       (if (eql :infinite (bw ln))
+				   0
+				   (/ (size o) (bw ln))))
 			:fn (lambda ()
 			      (unlock! b)
 			      (when (waits? b)
