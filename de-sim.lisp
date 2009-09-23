@@ -328,6 +328,13 @@
 (defun gettime! ()
   *clock*)
 
+(defun cancel! (ev)
+  (! (setf (dead? ev) t)))
+
+(defun change-time! (ev tm)
+  (! (setf (tm ev) tm)
+     (setf *evs* (stable-sort *evs* #'< :key #'tm))))
+
 (defun fire! ()
   "Deve ritornare la lista di eventi generati da `event' oppure nil"
   (let ((ev (pop *evs*)))
