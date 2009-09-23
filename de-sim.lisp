@@ -74,6 +74,10 @@
   (declare (ignore c))
   (invoke-restart 'wait))
 
+(defun cancel (c)
+  (declare (ignore c))
+  (invoke-restart 'cancel))
+
 
 (defgeneric clone (obj))
 (defgeneric transform! (copy original))
@@ -436,15 +440,10 @@
       t))
 
 
-(defmethod access? :around ((s sim) (b fbag) (o obj))
+(defmethod access? :around ((s sim) (b bag) (o obj))
   (restart-case (call-next-method s b o)
     (wait ()
       (! (setf (waits? b) t)))))
-
-
-(defmethod wakeup! ((s sim) (b bag) dst-bag dst-sim)
-  (setf (waiting? b) nil)
-  (out! s b dst-bag dst-sim))
 
 
 (defmethod empty? ((b bag))
@@ -453,7 +452,9 @@
 
 (defmethod peek ((b bag))
   (if (empty? b)
-      (error 'empty-bag)
+      (restart-case (error 'empty-bag)
+	(cancel ()
+	  nil))
       (first (elements b))))
 
 
@@ -464,7 +465,9 @@
 
 (defmethod remove! ((b bag) &key)
   (if (empty? b)
-      (error 'empty-bag)
+      (restart-case (error 'empty-bag)
+	(cancel ()
+	  nil))
       (pop (elements b))))
 
 
@@ -475,10 +478,20 @@
 
 
 (defmethod unlock! ((b bag))
-  (if (not (lock? b))
-      (error "bag gia' unlockata!")
-      (! (setf (lock? b) nil))))
-
+  (when (not (lock? b))
+    (error "bag gia' unlockata!"))
+  (! (setf (lock? b) nil)
+     (when (waits? b)
+       (setf (waits? b) nil)
+       (when (not (= 1 (length (sources b))))
+	 (error "piu' di una source, come faccio a sapere quale sveglio!?"))
+       (let* ((src (first (sources b)))
+	      (src-sim (owner src)))
+	 (setf (waiting? src) nil)
+	 (schedule! (new 'event :tm (gettime!)
+			 :desc (format nil "out! ~a ~a t t" src-sim src)
+			 :fn (lambda ()
+			       (out! (owner src) src t t))))))))
 
 
 ;; Tra un `out!' e il successivo `in!'  non ci deve essere tempo in
@@ -527,7 +540,7 @@
       (! (setf (flush? b) nil))
       (when (not (waiting? b))
 	(schedule! (new 'event :owner-id (id s)
-			:desc (format nil "out! ~a ~a ~a ~a" s b t t)
+			:desc (format nil "out! ~a ~a t t" s b)
 			:tm (next-out-time s b)
 			:fn (lambda ()
 			      ;; le destinazioni sono t t perche'
@@ -565,20 +578,14 @@
 
 (defmethod in! ((ln ln->) (b fbag) (o obj) dst-bag dst-sim)
   (lock! b)
-  (if (> (length (sources b)) 1)
-      (error "Piu' di una source, come fa wakeup! a svegliare quella giusta?")
-      (let ((src (first (sources b))))
-	(schedule! (new 'event :owner-id (id b)
-			:desc (format nil "unlock ~a e wakeup! ~a" b src)
-			:tm (+ (gettime!)
-			       (if (eql :infinite (bw ln))
-				   0
-				   (/ (size o) (bw ln))))
-			:fn (lambda ()
-			      (unlock! b)
-			      (when (waits? b)
-				(setf (waits? b) nil)
-				(wakeup! (owner src) src t t)))))))
+  (schedule! (new 'event :owner-id (id b)
+		  :desc (format nil "unlock! ~a" b)
+		  :tm (+ (gettime!)
+			 (if (eql :infinite (bw ln))
+			     0
+			     (/ (size o) (bw ln))))
+		  :fn (lambda ()
+			(unlock! b))))
   (when (not (< (random 100)
 		(err-rate ln)))
     (call-next-method)))
