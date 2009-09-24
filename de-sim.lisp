@@ -84,6 +84,7 @@
 (defgeneric setup-new! (obj))
 (defgeneric connect! (bag-src bag-dst))
 (defgeneric default-dest (sim bag))
+(defgeneric the-only-source (bag))
 (defgeneric access? (sim bag obj))
 (defgeneric wakeup! (sim bag dst-bag dst-sim))
 (defgeneric empty? (bag))
@@ -430,6 +431,12 @@
   (if (null (dests b))
       (error 'no-destination)
       (first (dests b))))
+
+
+(defmethod the-only-source ((b bag))
+  (if (= 1 (length (sources b)))
+      (first (sources b))
+      (error "the-only-source: ~a ha piu' di una source!" b)))
 
 
 (defmethod access? ((s sim) (b bag) (o obj))
