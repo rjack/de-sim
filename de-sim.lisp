@@ -86,7 +86,6 @@
 (defgeneric default-dest (sim bag))
 (defgeneric the-only-source (bag))
 (defgeneric access? (sim bag obj))
-(defgeneric wakeup! (sim bag dst-bag dst-sim))
 (defgeneric empty? (bag))
 (defgeneric peek (bag))
 (defgeneric insert! (bag obj &key))
@@ -350,7 +349,7 @@
 	       (progn
 		 (setf *clock* (tm ev))
 		 (setf (dead? ev) t)
-		 (format t "~a: ~a~%" *clock* ev)
+		 ;(format t "~a: ~a~%" *clock* ev)
 		 (funcall (fn ev))))))))
 
 (defun schedule! (ev)
@@ -367,7 +366,7 @@
 
 (defmethod print-object ((ev event) stream)
   (print-unreadable-object (ev stream :type nil)
-    (format stream "~a @~a: ~a" (name ev) (tm ev) (desc ev))))
+    (format stream "~a ~a: ~a" (name ev) (tm ev) (desc ev))))
 
 ;; METODI OBJ
 
@@ -393,7 +392,7 @@
     (dead? nil)
     (ts (gettime!))
     (name (concatenate 'string
-		       (string (type-of o))
+		       (string-downcase (type-of o))
 		       "-"
 		       (write-to-string (id o)))))
   o)
