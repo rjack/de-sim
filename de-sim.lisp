@@ -111,9 +111,8 @@
 
 
 (defclass event (obj)
-  ((owner-id :initarg :owner-id :accessor owner-id)
    ;; dead? = t significa: firato oppure annullato
-   (tm       :initarg :tm       :accessor tm)
+  ((tm       :initarg :tm       :accessor tm)
    (fn       :initarg :fn       :accessor fn)
    (desc     :initarg :desc     :accessor desc)))
 
@@ -502,7 +501,7 @@
 	      (src-sim (owner src)))
 	 (setf (waiting? src) nil)
 	 (schedule! (new 'event :tm (gettime!)
-			 :desc (format nil "out! ~a ~a t t" src-sim src)
+			 :desc (str "out! ~a ~a t t" src-sim src)
 			 :fn (lambda ()
 			       (out! (owner src) src t t))))))))
 
@@ -524,9 +523,9 @@
   (call-next-method)
   (when (not (flush? b))
     (setf (flush? b) t)
-    (schedule! (new 'event :owner-id (id s)
-		    :desc (format nil "out! ~a ~a ~a ~a" s b dst-bag dst-sim)
+    (schedule! (new 'event
 		    :tm (next-out-time s b)
+		    :desc (str "out! ~a ~a ~a ~a" s b dst-bag dst-sim)
 		    :fn (lambda ()
 			  (out! s b dst-bag dst-sim))))))
 
@@ -541,8 +540,7 @@
       (let ((o (remove! b)))
 	(schedule!
 	 (new 'event :tm (gettime!)
-	      :desc (format nil "in! ~a ~a ~a ~a ~a" dst-sim dst-bag o t t)
-	      :owner-id (id dst-sim)
+	      :desc (str "in! ~a ~a ~a t t" dst-sim dst-bag o)
 	      :fn (lambda ()
 		    (in! dst-sim dst-bag o t t)))))))
 
@@ -552,9 +550,8 @@
   (if (empty? b)
       (! (setf (flush? b) nil))
       (when (not (waiting? b))
-	(schedule! (new 'event :owner-id (id s)
-			:desc (format nil "out! ~a ~a t t" s b)
-			:tm (next-out-time s b)
+	(schedule! (new 'event :tm (next-out-time s b)
+			:desc (str "out! ~a ~a t t" s b)
 			:fn (lambda ()
 			      ;; le destinazioni sono t t perche'
 			      ;; devono essere decise nuovamente dal
@@ -591,14 +588,14 @@
 
 (defmethod in! ((ln ln->) (b fbag) (o obj) dst-bag dst-sim)
   (lock! b)
-  (schedule! (new 'event :owner-id (id b)
-		  :desc (format nil "unlock! ~a" b)
-		  :tm (+ (gettime!)
-			 (if (eql :infinite (bw ln))
-			     0
-			     (/ (size o) (bw ln))))
+  (schedule! (new 'event :tm (+ (gettime!)
+				(if (eql :infinite (bw ln))
+				    0
+				    (/ (size o) (bw ln))))
+		  :desc (str "unlock! ~a" b)
 		  :fn (lambda ()
 			(unlock! b))))
-  (when (not (< (random 100)
-		(err-rate ln)))
-    (call-next-method)))
+  (if (not (< (random 100)
+	      (err-rate ln)))
+      (call-next-method)
+      (my-log "packet-loss ~a ~a ~a" ln b o)))
