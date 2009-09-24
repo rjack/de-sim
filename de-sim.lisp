@@ -363,6 +363,13 @@
      (id o2)))
 
 
+(defmacro my-log (control-string &body format-arguments)
+  `(format t ,(concatenate 'string "~a " control-string "~%")
+	   *clock* ,@format-arguments))
+
+(defmacro str (control-string &body format-arguments)
+  `(format nil ,control-string ,@format-arguments))
+
 
 (defmethod print-object ((ev event) stream)
   (print-unreadable-object (ev stream :type nil)
