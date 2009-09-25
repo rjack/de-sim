@@ -371,7 +371,11 @@
 
 (defmethod print-object ((ev event) stream)
   (print-unreadable-object (ev stream :type nil)
-    (format stream "~a ~a: ~a" (name ev) (tm ev) (desc ev))))
+    (format stream "~a ~a: ~a" (concatenate 'string (if (dead? ev)
+							"DEAD-"
+							"")
+					    (name ev))
+	    (tm ev) (desc ev))))
 
 ;; METODI OBJ
 
