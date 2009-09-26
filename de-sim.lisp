@@ -274,6 +274,18 @@
      :collecting val))
 
 
+(defun collect (size fn)
+  "Contract: (integer 0) function -> list
+
+   Purpose: to return a list of length SIZE filled with the results of
+            SIZE invocations of FUNCTION."
+
+  (declare ((integer 0) size)
+	   (function fn))
+  (loop :repeat size
+     :collecting (funcall fn)))
+
+
 (defmacro new (class-name &body body)
   `(setup-new! (make-instance ,class-name ,@body)))
 
